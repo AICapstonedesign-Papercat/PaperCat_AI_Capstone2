@@ -1,0 +1,49 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/Ionicons.ttf",
+      "sha1": "86e07c3d974eb09099e6e5a9b3b8310303cf0feb"
+    },
+    {
+      "path": "assets/fonts/Pretendard-Bold.otf",
+      "sha1": "bd4ac82cc26cf93c89cfbfbbba8825c5198b5b99"
+    },
+    {
+      "path": "assets/fonts/Pretendard-ExtraBold.otf",
+      "sha1": "ea07e7375c62c8386f77431f0f62a2cbdea34618"
+    },
+    {
+      "path": "assets/fonts/Pretendard-Medium.otf",
+      "sha1": "eba1a37734a9c4fe3d84f540ce8d812d366b2b22"
+    },
+    {
+      "path": "assets/fonts/Pretendard-Regular.otf",
+      "sha1": "e205ef0a314d9da4e1a9382e0e65a25900a9ac7b"
+    },
+    {
+      "path": "assets/fonts/Pretendard-SemiBold.otf",
+      "sha1": "916a62152b7fd08ff43d239de04303a465521fe6"
+    },
+    {
+      "path": "assets/fonts/SUIT-Bold.otf",
+      "sha1": "39f201d0359ddfd30dd02eb188083cade906190f"
+    },
+    {
+      "path": "assets/fonts/SUIT-ExtraBold.otf",
+      "sha1": "316b1281f972b3bf6f32d7ad8bbafa54f1c81e58"
+    },
+    {
+      "path": "assets/fonts/SUIT-Medium.otf",
+      "sha1": "3f4c10fe9129e1006500041c6f8562e7132c3409"
+    },
+    {
+      "path": "assets/fonts/SUIT-Regular.otf",
+      "sha1": "9fae25a0a5c0797eadf7a37150ac215bce4b65df"
+    },
+    {
+      "path": "assets/fonts/SUIT-SemiBold.otf",
+      "sha1": "fa455d860e23b3ac2ec682538ff2ec9ad7a60e65"
+    }
+  ]
+}
