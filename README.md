@@ -49,3 +49,7 @@ src/
 | 상태 | 21화면 설계 완료 | 화면 계승 + 실데이터·평가 파이프라인 연동 |
 
 자세한 기획 배경은 [기획서 아티팩트](https://claude.ai/code/artifact/437ce165-aa9a-4382-8c42-c508e31e25eb)를 참고하세요.
+
+## 진행 중
+
+마스코트(식빵이) 이미지·영상 에셋을 Higgsfield로 제작 중입니다. 이미지는 Seedream 5.0 Lite, 영상은 Seedance 2.0 사용.
