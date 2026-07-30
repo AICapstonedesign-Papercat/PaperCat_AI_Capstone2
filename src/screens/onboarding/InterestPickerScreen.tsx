@@ -2,19 +2,19 @@ import React, { useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ScrollView, Animated, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
-import { colors } from '../../theme/tokens';
+import { colors, CAT_COLORS } from '../../theme/tokens';
 import { useStore } from '../../store';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
-// Figma "InterestPicker (진영 합류형)" 확정 시안 — 진영 4개, 진영별 컬러
+// Figma "InterestPicker (진영 합류형)" 확정 시안 — 진영 4개, 진영별 컬러는 CAT_COLORS(tokens.ts)에서 가져옴
 const FACTIONS = [
-  { id: 'NLP',   name: 'NLP 진영',    sub: '언어모델 탐구대',   members: 128, color: '#996B42' },
-  { id: 'CV',    name: 'CV 진영',     sub: '컴퓨터비전 원정대', members: 96,  color: '#6B855C' },
-  { id: 'RL',    name: 'RL 진영',     sub: '강화학습 특공대',   members: 54,  color: '#B36652' },
-  { id: 'GenAI', name: '생성AI 진영', sub: '디퓨전·GAN 창작단', members: 71,  color: '#78618C' },
+  { id: 'NLP',   name: 'NLP 진영',    sub: '언어모델 탐구대',   members: 128, color: CAT_COLORS.NLP },
+  { id: 'CV',    name: 'CV 진영',     sub: '컴퓨터비전 원정대', members: 96,  color: CAT_COLORS.CV },
+  { id: 'RL',    name: 'RL 진영',     sub: '강화학습 특공대',   members: 54,  color: CAT_COLORS.RL },
+  { id: 'GenAI', name: '생성AI 진영', sub: '디퓨전·GAN 창작단', members: 71,  color: CAT_COLORS.생성AI },
 ];
 
 function FactionCard({ f, sel, cardStyle, onPress }: { f: typeof FACTIONS[number]; sel: boolean; cardStyle: any; onPress: () => void }) {
@@ -32,7 +32,7 @@ function FactionCard({ f, sel, cardStyle, onPress }: { f: typeof FACTIONS[number
   return (
     <Animated.View style={{ flex: 1, minWidth: cardStyle.minWidth, transform: [{ scale }] }}>
       <Pressable
-        style={[s.card, { borderColor: sel ? f.color : colors.hairline }, sel && s.cardSel]}
+        style={[s.card, { borderColor: f.color }, sel && s.cardSel]}
         onPress={press}
       >
         {sel && (
@@ -40,7 +40,7 @@ function FactionCard({ f, sel, cardStyle, onPress }: { f: typeof FACTIONS[number
             <Text style={s.ribbonText}>합류완료</Text>
           </View>
         )}
-        <View style={[s.emblem, { borderColor: sel ? f.color : colors.hairline }]}>
+        <View style={[s.emblem, { borderColor: f.color }]}>
           <Feather name="award" size={28} color={sel ? f.color : colors.faint} />
         </View>
         <Text style={[s.factionName, sel && { color: colors.ink }]}>{f.name}</Text>
@@ -61,10 +61,13 @@ export default function InterestPickerScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
 
+  const MAX_FACTIONS = 3;
   const toggle = (id: string) => {
-    setSelected(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+    setSelected(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length >= MAX_FACTIONS) return prev;
+      return [...prev, id];
+    });
   };
 
   const finish = () => {
@@ -79,11 +82,11 @@ export default function InterestPickerScreen({ navigation }: Props) {
         <Pressable style={s.back} onPress={() => navigation.goBack()}>
           <Feather name="chevron-left" size={20} color={colors.text} />
         </Pressable>
-        <View style={s.track}><View style={[s.fill, { width: '80%' }]} /></View>
+        <View style={s.track}><View style={[s.fill, { width: '75%' }]} /></View>
       </View>
 
       <ScrollView contentContainerStyle={s.body}>
-        <Text style={s.title}>관심있는 진영을 골라라냥</Text>
+        <Text style={s.title}>어떤 진영에 합류할래냥? (최대 {MAX_FACTIONS}개)</Text>
         <Text style={s.helper}>진영에 따라 추천 논문이 달라져요</Text>
 
         <View style={[s.factionRow, isWide && s.factionRowWide]}>
@@ -99,7 +102,8 @@ export default function InterestPickerScreen({ navigation }: Props) {
         </View>
 
         <Text style={s.status}>
-          {selected.length === 0 ? '아직 합류한 진영이 없어요' : `${selected.length}개 진영 합류 완료`}
+          {selected.length}/{MAX_FACTIONS} 진영 합류 완료
+          {selected.length > 0 && selected.length < MAX_FACTIONS ? ` · ${MAX_FACTIONS - selected.length}개 더 고를 수 있어요` : ''}
         </Text>
       </ScrollView>
 

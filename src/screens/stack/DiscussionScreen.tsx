@@ -37,7 +37,7 @@ export default function DiscussionScreen({ navigation }: Props) {
 
       <View style={centerColumn}>
         <ScrollView style={readingWidth} contentContainerStyle={s.scroll}>
-          <Text style={s.vsTitle}>Self-Attention을 둘러싼 2파전</Text>
+          <Text style={s.vsTitle}>Self-Attention을 둘러싼 3파전</Text>
 
           <View style={[s.sides, isWide && s.sidesWide]}>
             {SIDES.map((side, i) => (

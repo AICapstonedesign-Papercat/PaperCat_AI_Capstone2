@@ -40,6 +40,8 @@ export default function StageMapScreen({ navigation, route }: Props) {
 
       <View style={centerColumn}>
         <ScrollView style={readingWidth} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+          <Text style={s.subTitle}>Attention is All You Need — {STAGES.length}개 스테이지 여정</Text>
+
           <View style={s.statCard}>
             <Text style={s.pct}>{Math.round(pct * 100)}%</Text>
             <Text style={s.pctSub}>{doneCount}/{STAGES.length} 스테이지 완료 · 예상 12분 남음</Text>
@@ -60,6 +62,13 @@ export default function StageMapScreen({ navigation, route }: Props) {
                     onPress={() => navigation.navigate(st.screen, { paperId })}
                   >
                     {isDone && <Text style={s.sparkle}>✦</Text>}
+                    {/* Figma 그대로 — 완독 보상은 별도 블록이 아니라 마지막(잠긴) 노드 바로 위에 붙음 */}
+                    {i === STAGES.length - 1 && (
+                      <View style={s.reward}>
+                        <Text style={s.rewardIcon}>🎁</Text>
+                        <Text style={s.rewardLabel}>완독 보상</Text>
+                      </View>
+                    )}
                     <View style={[s.badge, isDone && s.badgeDone, isActive && s.badgeActive, isLocked && s.badgeLocked]}>
                       {isActive ? (
                         <Image source={require('../../../assets/cat/cat-wave.png')} style={s.mascot} resizeMode="contain" />
@@ -79,11 +88,6 @@ export default function StageMapScreen({ navigation, route }: Props) {
             })}
           </View>
 
-          <View style={s.reward}>
-            <Text style={s.rewardIcon}>🎁</Text>
-            <Text style={s.rewardLabel}>완독 보상</Text>
-          </View>
-
           <View style={s.footerBar}>
             <ProgressBar value={pct} height={8} fillColor={colors.accent2} trackColor={colors.hairline} />
           </View>
@@ -97,6 +101,8 @@ const s = StyleSheet.create({
   nav: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, paddingBottom: 10 },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   navTitle: { flex: 1, fontSize: 17, fontFamily: 'SUIT-Medium', fontWeight: undefined, color: colors.ink },
+
+  subTitle: { fontSize: 13, fontFamily: 'Pretendard-Regular', color: colors.accent2, marginBottom: 16 },
 
   statCard: {
     borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.accent2, borderRadius: 20,
@@ -125,9 +131,9 @@ const s = StyleSheet.create({
   nodeTitle: { fontSize: 12.5, fontFamily: 'Pretendard-Bold', color: colors.ink, textAlign: 'center' },
   nodeStatus: { fontSize: 10.5, fontFamily: 'Pretendard-Regular', color: colors.muted, marginTop: 2 },
 
-  reward: { alignItems: 'center', marginBottom: 28 },
-  rewardIcon: { fontSize: 28, marginBottom: 4 },
-  rewardLabel: { fontSize: 12, fontFamily: 'Pretendard-Bold', color: colors.accent2 },
+  reward: { alignItems: 'center', marginBottom: 4 },
+  rewardIcon: { fontSize: 20 },
+  rewardLabel: { fontSize: 10, fontFamily: 'Pretendard-Bold', color: colors.accent2 },
 
   footerBar: { marginTop: 4 },
 });

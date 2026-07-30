@@ -9,6 +9,7 @@ export type PaperCatState = {
   isGuest: boolean;
   catName: string;
   personality: 'curious' | 'calm' | 'passionate' | 'chill';
+  aiLevel: 'beginner' | 'intermediate';
   level: number;
   xp: number;
   xpToNext: number;
@@ -31,6 +32,7 @@ const DEFAULT: PaperCatState = {
   isGuest: false,
   catName: '식빵',
   personality: 'curious',
+  aiLevel: 'beginner',
   level: 7,
   xp: 320,
   xpToNext: 500,
@@ -50,32 +52,84 @@ type Listener = (state: PaperCatState) => void;
 const listeners = new Set<Listener>();
 let cache: PaperCatState = { ...DEFAULT };
 let loaded = false;
+let loadPromise: Promise<PaperCatState> | null = null;
+let pendingUpdates: StoreUpdate[] = [];
+let persistChain = Promise.resolve();
+let persistQueued = false;
+
+type StoreUpdate = Partial<PaperCatState> | ((s: PaperCatState) => Partial<PaperCatState>);
+
+function applyUpdate(update: StoreUpdate) {
+  const patch = typeof update === 'function' ? update(cache) : update;
+  cache = { ...cache, ...patch };
+}
+
+function parseState(raw: string): Partial<PaperCatState> {
+  try {
+    const value: unknown = JSON.parse(raw);
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Partial<PaperCatState>)
+      : {};
+  } catch {
+    return {};
+  }
+}
 
 async function load() {
   if (loaded) return cache;
+  if (loadPromise) return loadPromise;
+
+  loadPromise = (async () => {
+    try {
+      const raw = await AsyncStorage.getItem(KEY);
+      cache = { ...DEFAULT, ...(raw ? parseState(raw) : {}) };
+    } catch {
+      cache = { ...DEFAULT };
+    }
+
+    const hadPendingUpdates = pendingUpdates.length > 0;
+    for (const update of pendingUpdates) applyUpdate(update);
+    pendingUpdates = [];
+    loaded = true;
+    emit();
+    if (hadPendingUpdates) schedulePersist();
+    return cache;
+  })();
+
   try {
-    const raw = await AsyncStorage.getItem(KEY);
-    if (raw) cache = { ...DEFAULT, ...JSON.parse(raw) };
-  } catch {
-    // ignore
+    return await loadPromise;
+  } finally {
+    loadPromise = null;
   }
-  loaded = true;
-  return cache;
 }
 
-async function persist() {
-  try {
-    await AsyncStorage.setItem(KEY, JSON.stringify(cache));
-  } catch {
-    // ignore
-  }
+function schedulePersist() {
+  if (!loaded || persistQueued) return;
+  persistQueued = true;
+
+  // ponytail: coalesce same-tick updates; replace with a real persistence queue only if writes become measurable.
+  Promise.resolve().then(() => {
+    persistQueued = false;
+    const snapshot = JSON.stringify(cache);
+    persistChain = persistChain
+      .catch(() => undefined)
+      .then(() => AsyncStorage.setItem(KEY, snapshot))
+      .catch(() => undefined);
+  });
+}
+
+async function flushPersist() {
+  while (persistQueued) await Promise.resolve();
+  await persistChain;
 }
 
 function emit() {
-  listeners.forEach(fn => fn(cache));
+  [...listeners].forEach(fn => fn(cache));
 }
 
-export function useStore(): [PaperCatState, (patch: Partial<PaperCatState> | ((s: PaperCatState) => Partial<PaperCatState>)) => void] {
+export type StoreSetter = (patch: StoreUpdate) => void;
+
+export function useStore(): [PaperCatState, StoreSetter] {
   const [state, setState] = useState(cache);
 
   useEffect(() => {
@@ -91,11 +145,11 @@ export function useStore(): [PaperCatState, (patch: Partial<PaperCatState> | ((s
     };
   }, []);
 
-  const set = useCallback((patchOrFn: Partial<PaperCatState> | ((s: PaperCatState) => Partial<PaperCatState>)) => {
-    const patch = typeof patchOrFn === 'function' ? patchOrFn(cache) : patchOrFn;
-    cache = { ...cache, ...patch };
+  const set = useCallback((update: StoreUpdate) => {
+    if (!loaded) pendingUpdates.push(update);
+    applyUpdate(update);
     emit();
-    persist();
+    schedulePersist();
   }, []);
 
   return [state, set];
@@ -106,7 +160,10 @@ export async function loadStore() {
 }
 
 export async function resetStore() {
+  await load();
   cache = { ...DEFAULT };
+  pendingUpdates = [];
   emit();
-  await persist();
+  schedulePersist();
+  await flushPersist();
 }

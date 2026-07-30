@@ -11,6 +11,8 @@ import type { ParamListBase } from '@react-navigation/native';
 type Props = NativeStackScreenProps<ParamListBase>;
 
 const PERS_LABEL: Record<string, string> = { curious: '호기심 많은 논문 탐험가', calm: '차분한 논문 탐험가', passionate: '열정 넘치는 논문 탐험가', chill: '여유로운 논문 탐험가' };
+const AI_LEVEL_LABEL: Record<string, string> = { beginner: '입문', intermediate: '심화' };
+const AI_LEVEL_NEXT: Record<string, 'beginner' | 'intermediate'> = { beginner: 'intermediate', intermediate: 'beginner' };
 
 type Badge = { emoji: string; name: string; locked?: boolean };
 
@@ -24,7 +26,7 @@ const BADGES: Badge[] = [
 ];
 
 export default function ProfileScreen({ navigation }: Props) {
-  const [state] = useStore();
+  const [state, set] = useStore();
   const [alarm, setAlarm] = React.useState(true);
   const [dark, setDark] = React.useState(false);
   const interests = (state as any).interests as string[] | undefined;
@@ -92,6 +94,17 @@ export default function ProfileScreen({ navigation }: Props) {
             <Setting ic="moon"   label="다크 모드"  sub="눈이 편안해요"        right={<Switch value={dark}  onValueChange={setDark}  trackColor={{ true: colors.accent, false: colors.hairline }} />} divider />
             <Setting ic="target" label="주간 목표"  sub="스트릭 커밋 설정"     right={<Text style={s.settingVal}>{state.weeklyGoalLabel || '꾸준히'}</Text>} divider />
             <Setting ic="tag"    label="관심 분야"  sub="탐색 추천에 반영돼요"  right={<Text style={s.settingVal}>{interests?.slice(0, 2).join(' · ') || 'NLP · CV'}</Text>} divider />
+            <Setting
+              ic="book-open"
+              label="AI 지식수준"
+              sub="논문 설명 난이도에 반영돼요 — 탭해서 전환"
+              right={
+                <Pressable onPress={() => set({ aiLevel: AI_LEVEL_NEXT[state.aiLevel] })}>
+                  <Text style={s.settingVal}>{AI_LEVEL_LABEL[state.aiLevel] || '입문'}</Text>
+                </Pressable>
+              }
+              divider
+            />
             <Setting ic="info"   label="앱 정보"    sub="버전 1.0.0"           right={<Feather name="chevron-right" size={18} color={colors.faint} />} divider />
           </View>
 

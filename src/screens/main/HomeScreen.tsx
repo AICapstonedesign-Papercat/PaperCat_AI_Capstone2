@@ -5,8 +5,8 @@ import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../theme/tokens';
 import { useStore } from '../../store';
-import { PAPERS } from './ExploreScreen';
-import { SectionTitle, Chip, GradeBadge, ProgressBar } from '../../components';
+import { PAPERS } from '../../data/papers';
+import { SectionTitle, GradeBadge, ProgressBar } from '../../components';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 

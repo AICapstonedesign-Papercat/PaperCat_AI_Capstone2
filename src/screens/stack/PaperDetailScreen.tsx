@@ -5,20 +5,11 @@ import Feather from 'react-native-vector-icons/Feather';
 import { colors, readingWidth, centerColumn } from '../../theme/tokens';
 import { CatBubble, Card, Divider, GradeBadge } from '../../components';
 import { useStore } from '../../store';
-import { PAPERS } from '../main/ExploreScreen';
+import { PAPERS } from '../../data/papers';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
 type Props = NativeStackScreenProps<ParamListBase>;
-
-const BLOCKS = [
-  { label: 'Input Embedding',     bg: '#B8C9DE', fg: '#2D4D70' },
-  { label: 'Positional Encoding', bg: '#C9B8DE', fg: '#4D2D70' },
-  { label: 'Multi-Head Attention',bg: colors.brand, fg: '#fff', highlight: true },
-  { label: 'Add & Norm',          bg: '#DECEB8', fg: '#5C4A38' },
-  { label: 'Feed Forward',        bg: '#B8DEC0', fg: '#2D703D' },
-  { label: 'Output',              bg: '#3D2E22', fg: '#FBEFD7' },
-];
 
 export default function PaperDetailScreen({ navigation, route }: Props) {
   // route.params 타입 미정의 — as any로 접근 (per-screen param list 아직 없음)
@@ -35,7 +26,7 @@ export default function PaperDetailScreen({ navigation, route }: Props) {
         <Pressable style={s.back} onPress={() => navigation.goBack()}>
           <Feather name="chevron-left" size={22} color={colors.ink} />
         </Pressable>
-        <Text style={s.title} numberOfLines={1}>Attention is All You Need</Text>
+        <Text style={s.title} numberOfLines={1}>{paper?.title || '논문 상세'}</Text>
         {/* grade: S = 골드 배지 강조 / Normal = 옅은 텍스트 (공용 GradeBadge) */}
         <GradeBadge grade={paper?.grade} />
       </View>
@@ -76,7 +67,7 @@ export default function PaperDetailScreen({ navigation, route }: Props) {
           <Text style={[s.storyP, { marginBottom: 0 }]}>그러던 어느 날, 트랜스포머라는 이름의 똑똑한 새 배달부가 나타났습니다. 트랜스포머는 기존의 복잡한 순차 계산을 모두 없애고 전체 편지를 동시에 살펴봄으로써, AI가 훨씬 더 빠르고 정확하게 글을 이해할 수 있는 놀라운 변화를 이끌어냈습니다.</Text>
         </View>
 
-        {/* highlight bar: solid accent, no gradient */}
+        {/* highlight: Figma 그대로 — 좌측 세로바 + 헤딩(가운데정렬 pill 아님) */}
         <View style={s.highlight}>
           <Text style={s.highlightText}>핵심 개념 : Self-Attention (자기 주의 메커니즘)</Text>
         </View>
@@ -186,9 +177,9 @@ const s = StyleSheet.create({
   qmark: { fontFamily: 'SUIT-Medium', fontWeight: undefined, fontSize: 52, color: colors.muted, opacity: 0.4, marginBottom: 6, lineHeight: 38 },
   storyP: { fontSize: 14, fontFamily: 'Pretendard-Regular', color: colors.text, lineHeight: 23, marginBottom: 10 },
 
-  // highlight: solid accent strip
-  highlight: { backgroundColor: colors.accent, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 999, marginTop: 10, marginBottom: 10, alignSelf: 'center' },
-  highlightText: { fontSize: 13, fontFamily: 'Pretendard-SemiBold', color: '#fff' },
+  // highlight: 좌측 세로 accent bar + 헤딩(Figma 그대로) — 가운데정렬 필 아님
+  highlight: { borderLeftWidth: 3, borderLeftColor: colors.accent, paddingLeft: 12, paddingVertical: 4, marginTop: 10, marginBottom: 10 },
+  highlightText: { fontSize: 14, fontFamily: 'Pretendard-SemiBold', color: colors.ink },
 
   // why block: no card box, plain content on bg with top hairline
   whyBlock: { paddingTop: 16, paddingBottom: 12, borderTopWidth: 1, borderColor: colors.hairline },

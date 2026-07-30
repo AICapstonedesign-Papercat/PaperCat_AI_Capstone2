@@ -47,7 +47,7 @@ export default function StorytellingScreen({ navigation }: Props) {
           </View>
 
           <View style={s.whisper}>
-            <Image source={require('../../../assets/cat/face-curious.png')} style={s.whisperIcon} resizeMode="contain" />
+            <Image source={require('../../../assets/cat/pose-thinking.png')} style={s.whisperIcon} resizeMode="contain" />
             <View style={{ flex: 1 }}>
               <Text style={s.whisperLabel}>냥이의 속삭임</Text>
               <Text style={s.whisperText}>

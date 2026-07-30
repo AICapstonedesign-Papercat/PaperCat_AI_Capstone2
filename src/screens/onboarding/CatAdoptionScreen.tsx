@@ -18,12 +18,11 @@ const PERS_CAT: Record<string, any> = {
 };
 
 // Figma "CatAdoption" 확정 시안 그대로: 호기심냥/차분냥/열정냥/여유냥 4장 카드
-// color: 선택 시 테두리+글로우에 쓰는, 각 고양이 실제 털색에 맞춘 강조색
 const PERS = [
-  { id: 'curious',    name: '호기심냥', desc: '새로운 논문을 먼저 물어봐요', color: '#C9A876' },
-  { id: 'calm',       name: '차분냥',   desc: '천천히 꼼꼼하게 읽어요',       color: '#9CA8B0' },
-  { id: 'passionate', name: '열정냥',   desc: '한 번에 몰아서 학습해요',     color: '#D9793F' },
-  { id: 'chill',      name: '여유냥',   desc: '짧고 가볍게 자주 들러요',     color: '#D9C48A' },
+  { id: 'curious',    name: '호기심냥', desc: '새로운 논문을 먼저 물어봐요' },
+  { id: 'calm',       name: '차분냥',   desc: '천천히 꼼꼼하게 읽어요' },
+  { id: 'passionate', name: '열정냥',   desc: '한 번에 몰아서 학습해요' },
+  { id: 'chill',      name: '여유냥',   desc: '짧고 가볍게 자주 들러요' },
 ];
 
 export default function CatAdoptionScreen({ navigation }: Props) {
@@ -66,7 +65,6 @@ export default function CatAdoptionScreen({ navigation }: Props) {
         <Text style={s.title}>어떤 식빵이와 함께할래냥?</Text>
         <Text style={s.helper}>성격에 따라 학습 스타일이 달라져요 — 나중에 바꿀 수 있어요</Text>
 
-        {/* 카드/텍스트 라벨 없이 사진만 — 선택된 캐릭터는 링으로 표시 */}
         <View style={[s.persRow, isWide && s.persRowWide]}>
           {PERS.map((p) => {
             const sel = pers === p.id;
@@ -76,13 +74,11 @@ export default function CatAdoptionScreen({ navigation }: Props) {
                 style={[s.persItem, isWide && s.persItemWide]}
                 onPress={() => selectPers(p.id as PaperCatState['personality'])}
               >
-                {/* Image에 직접 shadow를 주는 방식은 이 프로젝트(New Architecture)에서
-                    이미지 콘텐츠 자체가 잘리는 버그가 실측 확인돼서 폐기 — 절대 안 잘리는
-                    원형 글로우(이미지 뒤에 별도 View)로 확정. 여유 공간을 살려 크고 은은하게. */}
                 <View style={s.persImgSlot}>
-                  {sel && <View style={[s.glow, { backgroundColor: p.color }]} />}
                   <Image source={PERS_CAT[p.id]} style={s.persImg} resizeMode="contain" />
                 </View>
+                <Text style={[s.persName, sel && s.persNameSel]}>{p.name}</Text>
+                <Text style={s.persDesc}>{p.desc}</Text>
               </Pressable>
             );
           })}
@@ -133,15 +129,15 @@ const s = StyleSheet.create({
   helper: { fontSize: 13, fontFamily: 'Pretendard-Regular', color: colors.muted, marginBottom: 24 },
 
   // 카드/텍스트 없이 사진만 크게, 가로 기준 4장 한 줄 / 좁으면 2장씩 랩
-  persRow:     { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 40, marginBottom: 36, overflow: 'visible' },
+  persRow:     { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 40, marginBottom: 36 },
   persRowWide: {},
-  persItem:     { width: '36%', alignItems: 'center', paddingVertical: 30, overflow: 'visible' },
+  persItem:     { width: '36%', alignItems: 'center', paddingVertical: 30 },
   persItemWide: { width: 220 },
-  // 이미지 슬롯: 글로우가 이미지보다 한참 크게 퍼져도 잘리지 않도록 여유 공간을 넉넉히 둠
-  persImgSlot:  { width: 260, height: 260, alignItems: 'center', justifyContent: 'center', overflow: 'visible' },
+  persImgSlot:  { width: 260, height: 260, alignItems: 'center', justifyContent: 'center' },
   persImg:      { width: 200, height: 200 },
-  // 이미지와 별개 레이어라 절대 안 잘림 — 여유 공간을 살려 넉넉한 크기로
-  glow:         { position: 'absolute', width: 240, height: 240, borderRadius: 999, opacity: 0.22 },
+  persName:     { fontSize: 16, fontFamily: 'Pretendard-Bold', color: colors.ink, marginTop: 4 },
+  persNameSel:  { color: colors.accent },
+  persDesc:     { fontSize: 12, fontFamily: 'Pretendard-Regular', color: colors.muted, marginTop: 4, textAlign: 'center' },
 
   nameSection: { width: '100%', alignItems: 'center' },
   label:   { fontSize: 12.5, fontFamily: 'Pretendard-Regular', color: colors.muted, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10, textAlign: 'center' },

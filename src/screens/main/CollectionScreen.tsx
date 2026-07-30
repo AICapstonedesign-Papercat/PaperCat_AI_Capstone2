@@ -88,18 +88,22 @@ export default function CollectionScreen({ navigation }: Props) {
 
         <Divider style={{ marginTop: 8, marginBottom: 20 }} />
 
-        <Text style={s.statsTitle}>분야별 학습 비율</Text>
-        {[{ l: 'NLP', v: 0.6 }, { l: 'CV', v: 0.3 }, { l: 'RL', v: 0.1 }].map((r) => (
-          <View key={r.l} style={s.statRow}>
-            <Text style={s.statLabel}>{r.l}</Text>
-            <View style={{ flex: 1 }}><ProgressBar value={r.v} height={6} fillColor={colors.accent2} trackColor={colors.hairline} /></View>
-            <Text style={s.statPct}>{Math.round(r.v * 100)}%</Text>
+        {/* Figma 그대로 — 학습비율 3줄 옆에 마스코트 배너를 나란히(우측) 배치 */}
+        <View style={s.statsRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.statsTitle}>분야별 학습 비율</Text>
+            {[{ l: 'NLP', v: 0.6 }, { l: 'CV', v: 0.3 }, { l: 'RL', v: 0.1 }].map((r) => (
+              <View key={r.l} style={s.statRow}>
+                <Text style={s.statLabel}>{r.l}</Text>
+                <View style={{ flex: 1 }}><ProgressBar value={r.v} height={6} fillColor={colors.accent2} trackColor={colors.hairline} /></View>
+                <Text style={s.statPct}>{Math.round(r.v * 100)}%</Text>
+              </View>
+            ))}
           </View>
-        ))}
-
-        <View style={s.banner}>
-          <Image source={require('../../../assets/cat/plush-cat.png')} style={s.bannerCat} />
-          <Text style={s.bannerText}><Text style={s.bannerAccent}>CV</Text>도 도전해봐냥!</Text>
+          <View style={s.banner}>
+            <Image source={require('../../../assets/cat/plush-cat.png')} style={s.bannerCat} />
+            <Text style={s.bannerText}><Text style={s.bannerAccent}>CV</Text>도 도전해봐냥!</Text>
+          </View>
         </View>
       </ScrollView>
       {state.isGuest && <GuestLockOverlay navigation={navigation} />}
@@ -129,13 +133,14 @@ const s = StyleSheet.create({
   grade:     { color: colors.muted },
   gradeTop:  { color: colors.accent },
 
+  statsRow:   { flexDirection: 'row', alignItems: 'center', gap: 24 },
   statsTitle: { fontSize: 12.5, fontFamily: 'Pretendard-Medium', color: colors.muted, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 },
   statRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
   statLabel:  { width: 40, fontSize: 12.5, fontFamily: 'SUIT-Medium', fontWeight: undefined, color: colors.ink, letterSpacing: 0.5 },
   statPct:    { width: 44, fontSize: 12, fontFamily: 'SUIT-Medium', fontWeight: undefined, color: colors.muted, textAlign: 'right' },
 
-  banner:    { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 24, paddingTop: 18, borderTopWidth: 1, borderColor: colors.hairline },
+  banner:    { width: 160, alignItems: 'center', gap: 8 },
   bannerCat: { width: 52, height: 52, resizeMode: 'contain' },
-  bannerText:{ flex: 1, fontSize: 14, fontFamily: 'Pretendard-Regular', color: colors.text },
+  bannerText:{ fontSize: 14, fontFamily: 'Pretendard-Regular', color: colors.text, textAlign: 'center' },
   bannerAccent: { color: colors.accent, fontFamily: 'Pretendard-SemiBold' },
 });

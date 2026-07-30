@@ -67,13 +67,13 @@ export const colors = {
   textMuted: '#857458',
 } as const;
 
+// 진영 세계관 컬러 — InterestPickerScreen(온보딩) 확정 시안 값을 그대로 옮김.
+// 진영이 늘어나면 여기와 InterestPickerScreen의 FACTIONS를 함께 갱신.
 export const CAT_COLORS = {
-  NLP: { bg: '#6E8FB8', fg: '#fff' },
-  CV: { bg: '#5FA84A', fg: '#fff' },
-  RL: { bg: '#6B4E8E', fg: '#fff' },
-  생성AI: { bg: '#C46B2A', fg: '#fff' },
-  추론: { bg: '#3D6E8E', fg: '#fff' },
-  멀티모달: { bg: '#8E4E6E', fg: '#fff' },
+  NLP: '#996B42',
+  CV: '#6B855C',
+  RL: '#B36652',
+  생성AI: '#78618C',
 } as const;
 
 export const radius = { sm: 10, md: 14, lg: 18, xl: 22, pill: 999 } as const;

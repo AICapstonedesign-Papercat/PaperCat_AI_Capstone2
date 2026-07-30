@@ -9,19 +9,12 @@ import { useStore } from './store';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
-type CatPose = 'wave' | 'happy' | 'curious' | 'focus' | 'default' | 'plush' | 'reading' | 'asking' | 'writing' | 'organize';
+// 실제로 pose= 로 쓰이는 값만 유지(wave는 기본값) — 나머지는 자산이 삭제됨
+type CatPose = 'wave' | 'reading';
 
 const poseMap: Record<CatPose, ImageSourcePropType> = {
   wave: require('../assets/cat/cat-wave.png'),
-  happy: require('../assets/cat/face-happy.png'),
-  curious: require('../assets/cat/face-curious.png'),
-  focus: require('../assets/cat/face-focus.png'),
-  default: require('../assets/cat/face-default.png'),
-  plush: require('../assets/cat/plush-cat.png'),
   reading: require('../assets/cat/pose-reading-book.png'),
-  asking: require('../assets/cat/pose-asking.png'),
-  writing: require('../assets/cat/pose-writing.png'),
-  organize: require('../assets/cat/pose-organize.png'),
 };
 
 export function CatBubble({ pose = 'wave', children, size = 64 }: { pose?: CatPose; children: React.ReactNode; size?: number }) {

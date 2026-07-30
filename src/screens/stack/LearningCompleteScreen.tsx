@@ -1,13 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, Animated, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 import { colors, readingWidth } from '../../theme/tokens';
 import { useStore } from '../../store';
+import { PAPERS } from '../../data/papers';
+import { playPurring } from '../../audio/catSounds';
 
 const { width } = Dimensions.get('window');
+
+// Collection 화면 뱃지 이미지 재사용 — 없는 논문은 등급별 기본 뱃지로 대체
+const BADGE_BY_PAPER: Record<string, any> = {
+  attention: require('../../../assets/badges/badge-gold-1.png'),
+  bert:      require('../../../assets/badges/badge-gold-2.png'),
+  gpt2:      require('../../../assets/badges/badge-silver-1.png'),
+  resnet:    require('../../../assets/badges/badge-gold-3.png'),
+};
+
+// 입문(beginner)이 이 편수를 완독하면 심화로 넘어갈지 제안 — Profile의 aiLevel 토글 참고
+const AI_LEVEL_UPGRADE_AT = 5;
 
 // Confetti pieces: keep colors close to the editorial palette
 // (warm neutrals + single accent) — purely decorative animation, not UI chrome
@@ -67,8 +80,12 @@ type Props = NativeStackScreenProps<ParamListBase>;
 export default function LearningCompleteScreen({ navigation, route }: Props) {
   // params not typed yet
   const { paperId = 'attention', paperTitle = 'Attention is All You Need', xpEarned = 80 } = (route?.params as any) || {};
+  const grade = PAPERS.find(p => p.id === paperId)?.grade || 'S';
+  const gradeLabel = grade === 'S' ? 'GOLD' : 'SILVER';
+  const badgeImg = BADGE_BY_PAPER[paperId] || (grade === 'S' ? BADGE_BY_PAPER.attention : BADGE_BY_PAPER.gpt2);
   const [state, set] = useStore();
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [showUpgradeSuggest, setShowUpgradeSuggest] = useState(false);
 
   // Entrance animations — all preserved as-is
   const catScale   = useRef(new Animated.Value(0)).current;
@@ -79,8 +96,19 @@ export default function LearningCompleteScreen({ navigation, route }: Props) {
   const cardOpacity= useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // TODO(expo-av): port sound playback (cat-purring.mp3) — expo-av excluded in bare RN
-    const stopPurring = () => {};
+    let stopPurring: (() => void) | null = null;
+    let stillHere = true;
+    playPurring()
+      .then(stop => { if (stillHere) stopPurring = stop; else stop(); })
+      .catch(err => console.warn('[LearningComplete] cat-purring 재생 실패:', err));
+
+    // blur와 unmount 둘 다 이 함수를 부를 수 있어서 stop()이 두 번 불릴 수 있음(이미 멈춘
+    // source에 stop()을 또 부르면 에러) — 한 번 부르고 나면 null로 비워서 멱등하게 만든다.
+    const stopOnce = () => { stopPurring?.(); stopPurring = null; };
+
+    // unmount로만 정지하면 안 됨 — native-stack이 이 화면을 즉시 unmount하지 않고
+    // 뒤에 그대로 둔 채로만 넘어갈 수 있어서, 포커스를 잃는 시점(blur)에 확실히 멈춘다.
+    const unsubscribeBlur = navigation.addListener('blur', stopOnce);
 
     const leveledUp = state.xp + xpEarned >= state.xpToNext;
     set(prev => ({
@@ -91,6 +119,7 @@ export default function LearningCompleteScreen({ navigation, route }: Props) {
       papersDone: prev.papersDone + 1,
     }));
     if (leveledUp) setShowLevelUp(true);
+    else if (state.aiLevel === 'beginner' && state.papersDone + 1 === AI_LEVEL_UPGRADE_AT) setShowUpgradeSuggest(true);
 
     Animated.sequence([
       Animated.spring(catScale,   { toValue: 1, friction: 5, useNativeDriver: true }),
@@ -105,7 +134,7 @@ export default function LearningCompleteScreen({ navigation, route }: Props) {
       ]),
     ]).start();
 
-    return () => { stopPurring(); };
+    return () => { stillHere = false; stopOnce(); unsubscribeBlur(); };
   }, []);
 
   return (
@@ -138,21 +167,26 @@ export default function LearningCompleteScreen({ navigation, route }: Props) {
 
         {/* Paper info — no card box; hairline top + content directly on bg */}
         <Animated.View style={[s.card, readingWidth, { opacity: cardOpacity, transform: [{ translateY: cardY }] }]}>
-          {/* Saved indicator: muted kicker label, no green pill */}
-          <View style={s.cardTop}>
-            <Text style={s.savedKicker}>도감에 저장됨</Text>
-            <Feather name="bookmark" size={13} color={colors.accent} />
-          </View>
-          <Text style={s.cardTitle}>{paperTitle}</Text>
-          <View style={s.statsRow}>
-            <View style={s.stat}>
-              <Feather name="check-circle" size={13} color={colors.muted} />
-              <Text style={s.statText}>완독</Text>
+          <Image source={badgeImg} style={s.badgeImg} resizeMode="contain" />
+          <View style={{ flex: 1 }}>
+            {/* Saved indicator: muted kicker label, no green pill */}
+            <View style={s.cardTop}>
+              <Text style={s.savedKicker}>도감에 저장됨</Text>
+              <Feather name="bookmark" size={13} color={colors.accent} />
             </View>
-            <View style={s.statDiv} />
-            <View style={s.stat}>
-              <Feather name="star" size={13} color={colors.accent} />
-              <Text style={[s.statText, { color: colors.accent2 }]}>+{xpEarned} XP</Text>
+            <Text style={s.cardTitle}>{paperTitle}</Text>
+            <View style={s.statsRow}>
+              <View style={s.stat}>
+                <Feather name="check-circle" size={13} color={colors.muted} />
+                <Text style={s.statText}>완독</Text>
+              </View>
+              <View style={s.statDiv} />
+              <View style={s.stat}>
+                <Feather name="star" size={13} color={colors.accent} />
+                <Text style={[s.statText, { color: colors.accent2 }]}>+{xpEarned} XP</Text>
+              </View>
+              <View style={s.statDiv} />
+              <Text style={s.gradeText}>{gradeLabel}</Text>
             </View>
           </View>
         </Animated.View>
@@ -168,6 +202,23 @@ export default function LearningCompleteScreen({ navigation, route }: Props) {
             <Text style={s.levelUpHint}>탭해서 닫기</Text>
           </View>
         </Pressable>
+      )}
+
+      {/* AI 지식수준 승급 제안 — 레벨업 오버레이와 같은 톤, 버튼 2개(수락/보류) */}
+      {showUpgradeSuggest && (
+        <View style={s.levelUpOverlay}>
+          <View style={s.levelUpBox}>
+            <Feather name="trending-up" size={40} color={colors.accent} />
+            <Text style={s.levelUpTitle}>{AI_LEVEL_UPGRADE_AT}편 완독!</Text>
+            <Text style={s.levelUpSub}>이제 심화로 넘어가볼래냥?</Text>
+            <Pressable style={s.upgradeAccept} onPress={() => { set({ aiLevel: 'intermediate' }); setShowUpgradeSuggest(false); }}>
+              <Text style={s.upgradeAcceptText}>다음 단계로</Text>
+            </Pressable>
+            <Pressable onPress={() => setShowUpgradeSuggest(false)}>
+              <Text style={s.levelUpHint}>아직 이대로 할래요</Text>
+            </Pressable>
+          </View>
+        </View>
       )}
 
       {/* Footer */}
@@ -204,7 +255,9 @@ const s = StyleSheet.create({
   xpLabel:{ fontSize: 15, fontFamily: 'SUIT-Medium', color: colors.muted },
 
   // Paper card: no border/background — hairline top separates from above
-  card:    { borderTopWidth: 1, borderColor: colors.hairline, paddingTop: 20 },
+  card:    { flexDirection: 'row', gap: 14, alignItems: 'center', borderTopWidth: 1, borderColor: colors.hairline, paddingTop: 20 },
+  badgeImg:{ width: 56, height: 56 },
+  gradeText: { fontSize: 12, fontFamily: 'SUIT-Bold', fontWeight: undefined, color: colors.accent, letterSpacing: 0.5 },
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   // "도감에 저장됨" — kicker style, muted uppercased
   savedKicker: { fontSize: 11, fontFamily: 'Pretendard-Regular', color: colors.muted, letterSpacing: 1.4, textTransform: 'uppercase' },
@@ -220,6 +273,8 @@ const s = StyleSheet.create({
   levelUpTitle:   { fontSize: 34, fontFamily: 'SUIT-Medium', color: colors.ink, letterSpacing: 0.3 },
   levelUpSub:     { fontSize: 16, fontFamily: 'Pretendard-Regular', color: colors.accent },
   levelUpHint:    { fontSize: 11, fontFamily: 'Pretendard-Regular', color: colors.muted, marginTop: 8, letterSpacing: 0.8 },
+  upgradeAccept:     { marginTop: 10, height: 48, borderRadius: 999, paddingHorizontal: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
+  upgradeAcceptText: { color: '#fff', fontFamily: 'Pretendard-Bold', fontSize: 15 },
 
   footer:   { padding: 20, paddingBottom: 32, gap: 10 },
   // CTA: solid accent pill, borderRadius 999
