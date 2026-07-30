@@ -1,97 +1,51 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Paper Cat — iPad 앱 (bare React Native)
 
-# Getting Started
+고양이를 키우며 논문을 학습하는 게이미피케이션 모바일 앱 서비스.
+[캡스톤1](https://github.com/itsinseong/PaperCat_AI_Capstone1)(Expo, 가짜 데이터 목업)의 화면 설계를 계승해, iPad를 메인 타겟으로 확장하고 실제 논문 데이터·실 LLM 연동을 붙이는 캡스톤2 프로젝트입니다.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## 이 앱이 하는 일
 
-## Step 1: Start Metro
+영어 논문이 어려워서 못 읽는 비전공자를 위해, 논문을 큐레이션 → 쉬운 이야기로 변환 → 질문하면 답변 → 한 줄 요약 채점 → 도감에 모으는 학습 사이클을 제공합니다. 답변은 논문 원문 근거에 링크되고, 근거 없는 질문에는 명확히 "모른다"고 답합니다.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+백엔드·RAG 파이프라인은 별도 저장소([papercat-core](https://github.com/itsinseong/papercat-core))에서 검증 중이며, 이 저장소는 프론트엔드(iPad 앱)만 담당합니다.
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+## 빠른 시작
 
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+```bash
+npm install
+bundle install && bundle exec pod install --project-directory=ios
+npm start        # Metro
+npm run ios       # 또 다른 터미널에서
 ```
 
-## Step 2: Build and run your app
+Expo는 쓰지 않습니다(팀 결정, bare RN CLI + New Architecture).
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+## 구조
 
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+```
+src/
+├── navigation/
+│   ├── RootNavigator.tsx     # 온보딩 → 탭 → 학습 스택 전체 흐름
+│   ├── MainTabNavigator.tsx  # 홈/탐색/학습/도감/프로필
+│   └── SideRail.tsx          # 하단 탭바 대신 좌측 모노 인덱스 레일(Figma 확정판)
+├── screens/
+│   ├── onboarding/  # PlayFirst · CatAdoption(이름·성격) · InterestPicker · StreakCommit
+│   ├── main/        # Home · Explore · Study · Collection(도감) · Profile
+│   └── stack/       # StageMap · Storytelling · PaperDetail · QAChatbot · SummaryChallenge · Discussion · LearningComplete
+├── theme/tokens.ts   # 색상·타이포·반경 등 디자인 토큰
+├── components.tsx    # 공용 UI 컴포넌트
+├── store.ts           # AsyncStorage 기반 전역 상태(레벨·XP·스트릭·도감 진행도 등)
+├── data/papers.ts      # 논문 큐레이션 목업 데이터(→ 백엔드 연동 전 임시)
+└── audio/catSounds.ts  # 고양이 상호작용 사운드
 ```
 
-### iOS
+## 캡스톤1과의 차이
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+| | 캡스톤1 | 캡스톤2(이 저장소) |
+|---|---|---|
+| 스택 | Expo | bare React Native CLI |
+| 타겟 | iPhone 사이즈 | iPad(메인), iPhone은 후속 |
+| 데이터 | 목업 | arXiv 실 데이터 + RAG |
+| 상태 | 21화면 설계 완료 | 화면 계승 + 실데이터·평가 파이프라인 연동 |
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+자세한 기획 배경은 [기획서 아티팩트](https://claude.ai/code/artifact/437ce165-aa9a-4382-8c42-c508e31e25eb)를 참고하세요.
