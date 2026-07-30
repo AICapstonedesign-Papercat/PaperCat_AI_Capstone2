@@ -1,0 +1,87 @@
+{
+  "note": "기획서 (6) '골든셋 회귀 테스트 — 사람 채점과 1점 이내 일치율 80%↑'의 기준 데이터. 여기 humanScore는 인성이 초안으로 매긴 값이며 실제 '사람 채점'이 아니다 — 성민·인성이 3축 정의(judge.ts 상단 주석 참고)에 합의한 뒤 다시 매겨야 §9 게이트로 쓸 수 있다. referenceText는 각 논문의 abstract(out/*.json의 sectionId=abs)를 그대로 옮긴 것.",
+  "axes": ["accuracy", "completeness", "clarity"],
+  "papers": [
+    {
+      "paperId": "attention",
+      "referenceText": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. Experiments on two machine translation tasks show these models to be superior in quality while being more parallelizable and requiring significantly less time to train.",
+      "samples": [
+        {
+          "id": "attn-good",
+          "text": "Transformer는 순환·합성곱 없이 어텐션만으로 인코더-디코더를 구성해 번역 품질을 높이면서 학습을 더 병렬화·단축한 모델이다.",
+          "humanScore": { "accuracy": 2, "completeness": 2, "clarity": 2 }
+        },
+        {
+          "id": "attn-partial",
+          "text": "Transformer는 어텐션을 쓰는 번역 모델이다.",
+          "humanScore": { "accuracy": 2, "completeness": 0, "clarity": 2 },
+          "reasonDraft": "틀린 말은 아니지만 '왜/무엇을 바꿨는지'(순환·합성곱 제거, 병렬화)가 전부 빠짐"
+        },
+        {
+          "id": "attn-vague",
+          "text": "AI가 문장을 더 잘 이해하게 도와주는 새로운 방법을 제안한 논문이다.",
+          "humanScore": { "accuracy": 1, "completeness": 0, "clarity": 1 },
+          "reasonDraft": "논문 특정 내용이 전혀 없어 다른 아무 논문에도 붙일 수 있는 문장 — 명료성도 애매해서 1"
+        },
+        {
+          "id": "attn-wrong",
+          "text": "Transformer는 RNN을 개선해서 순환 구조를 더 깊게 쌓은 모델이다.",
+          "humanScore": { "accuracy": 0, "completeness": 0, "clarity": 2 },
+          "reasonDraft": "핵심 주장(순환 제거)과 정반대 — 문장 자체는 명료해서 clarity만 2"
+        },
+        {
+          "id": "attn-empty",
+          "text": "",
+          "humanScore": null,
+          "reasonDraft": "빈 입력 — uncertain으로 응답해야 정상. 실제로는 RN 화면에서 submit 자체가 막히지만 채점기 방어선으로 포함"
+        }
+      ]
+    },
+    {
+      "paperId": "resnet",
+      "referenceText": "Deeper neural networks are more difficult to train. We present a residual learning framework to ease the training of networks that are substantially deeper than those used previously. We explicitly reformulate the layers as learning residual functions with reference to the layer inputs, instead of learning unreferenced functions. We provide comprehensive empirical evidence showing that these residual networks are easier to optimize, and can gain accuracy from considerably increased depth.",
+      "samples": [
+        {
+          "id": "resnet-good",
+          "text": "ResNet은 층이 입력 자체를 다시 배우는 대신 잔차(차이)만 배우게 재구성해서, 아주 깊은 네트워크도 학습이 쉬워지고 깊이를 늘릴수록 정확도가 오르게 만들었다.",
+          "humanScore": { "accuracy": 2, "completeness": 2, "clarity": 2 }
+        },
+        {
+          "id": "resnet-partial",
+          "text": "ResNet은 깊은 신경망을 더 잘 학습시키는 방법이다.",
+          "humanScore": { "accuracy": 2, "completeness": 0, "clarity": 2 },
+          "reasonDraft": "잔차 학습이라는 핵심 메커니즘이 빠짐"
+        },
+        {
+          "id": "resnet-wrong",
+          "text": "ResNet은 층을 얕게 줄여서 과적합을 막는 모델이다.",
+          "humanScore": { "accuracy": 0, "completeness": 0, "clarity": 2 },
+          "reasonDraft": "논문은 오히려 '더 깊게' 쌓는 게 핵심이고 degradation은 과적합이 아니라고 명시함 — 정반대"
+        }
+      ]
+    },
+    {
+      "paperId": "llama",
+      "referenceText": "We introduce LLaMA, a collection of foundation language models ranging from 7B to 65B parameters. We train our models on trillions of tokens, and show that it is possible to train state-of-the-art models using publicly available datasets exclusively, without resorting to proprietary and inaccessible datasets. In particular, LLaMA-13B outperforms GPT-3 (175B) on most benchmarks, and LLaMA-65B is competitive with the best models, Chinchilla-70B and PaLM-540B.",
+      "samples": [
+        {
+          "id": "llama-good",
+          "text": "LLaMA는 공개 데이터만으로 학습해도 훨씬 큰 모델(GPT-3 등)과 맞먹는 성능을 내는 7B~65B 규모의 언어모델 모음이다.",
+          "humanScore": { "accuracy": 2, "completeness": 2, "clarity": 2 }
+        },
+        {
+          "id": "llama-partial",
+          "text": "LLaMA는 GPT-3보다 작은데 성능이 좋은 모델이다.",
+          "humanScore": { "accuracy": 1, "completeness": 1, "clarity": 2 },
+          "reasonDraft": "LLaMA-13B가 GPT-3를 능가한다는 것만 맞고, '공개 데이터만으로'라는 핵심 방법론이 빠져 정확성도 절반만 인정"
+        },
+        {
+          "id": "llama-wrong",
+          "text": "LLaMA는 비공개 독점 데이터를 대량으로 학습시켜 만든 초대형 모델이다.",
+          "humanScore": { "accuracy": 0, "completeness": 0, "clarity": 2 },
+          "reasonDraft": "논문의 핵심 차별점(공개 데이터 전용)과 정반대"
+        }
+      ]
+    }
+  ]
+}

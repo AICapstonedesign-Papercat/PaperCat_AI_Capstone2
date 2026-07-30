@@ -1,0 +1,143 @@
+{
+  "note": "기획서 §8 평가셋. 확장(8편) 시 범위내 30 + 범위밖 10 = 40문항이 목표이고, 현재는 기준 3편 규모라 15 + 5 = 20문항으로 같은 3:1 비율을 유지한다. expectedChunks는 out/*.json의 실제 문단을 전문 확인 후 지정했다.",
+  "passCriteria": {
+    "retrievalTop5": "범위내 질문에서 expectedChunks 중 최소 1개가 Top-5에 포함 — 80%↑ (12/15)",
+    "refusal": "범위밖 질문에서 status=refused — 80%↑ (4/5)",
+    "citationExistence": "answered 응답의 모든 인용 ID가 실제 존재 — 100%"
+  },
+  "splits": {
+    "dev": ["attention", "resnet"],
+    "holdout": ["llama"],
+    "note": "기획서는 8편에서 개발4/검증2/홀드아웃2를 요구한다. 3편 단계에서는 LLaMA를 홀드아웃으로 잡아 프롬프트 튜닝에 쓰지 않는다."
+  },
+  "questions": [
+    {
+      "id": "q01", "paperId": "attention", "type": "in_scope",
+      "question": "Transformer의 인코더는 몇 개 층으로 이루어져 있고 각 층은 어떤 서브레이어를 갖나요?",
+      "expectedChunks": ["1706.03762:s3:2"],
+      "expectedAnswer": "인코더는 동일한 층 6개(N=6)를 쌓은 구조이고, 각 층은 멀티헤드 self-attention 서브레이어와 position-wise 완전연결 피드포워드 서브레이어 2개로 구성됩니다."
+    },
+    {
+      "id": "q02", "paperId": "attention", "type": "in_scope",
+      "question": "Scaled Dot-Product Attention에서 왜 √d_k로 나눠주나요?",
+      "expectedChunks": ["1706.03762:s3:8"],
+      "expectedAnswer": "d_k가 커지면 내적 값이 커져 softmax가 기울기가 극히 작은 영역으로 밀려나기 때문에, 이를 상쇄하려고 1/√d_k로 스케일링합니다."
+    },
+    {
+      "id": "q03", "paperId": "attention", "type": "in_scope",
+      "question": "멀티헤드 어텐션을 쓰면 뭐가 좋아지나요?",
+      "expectedChunks": ["1706.03762:s3:9", "1706.03762:s3:10"],
+      "expectedAnswer": "서로 다른 표현 부분공간의 정보를 여러 위치에서 동시에 볼 수 있습니다. 헤드가 하나뿐이면 평균이 되면서 이런 구분이 사라집니다."
+    },
+    {
+      "id": "q04", "paperId": "attention", "type": "in_scope",
+      "question": "Transformer는 단어 순서를 어떻게 알 수 있나요?",
+      "expectedChunks": ["1706.03762:s3:19", "1706.03762:s3:20"],
+      "expectedAnswer": "순환도 합성곱도 없어서 순서 정보가 없기 때문에, 입력 임베딩에 위치 인코딩(positional encoding)을 더해줍니다. 서로 다른 주파수의 sin·cos 함수를 씁니다."
+    },
+    {
+      "id": "q05", "paperId": "attention", "type": "in_scope",
+      "question": "self-attention이 순환 레이어보다 유리하다고 말하는 근거가 뭔가요?",
+      "expectedChunks": ["1706.03762:s4:1", "1706.03762:s4:2", "1706.03762:s4:3"],
+      "expectedAnswer": "층당 연산 복잡도, 병렬화 가능한 연산량, 장거리 의존성의 경로 길이 세 가지를 비교합니다. self-attention은 상수 번의 순차 연산으로 모든 위치를 연결해 경로가 짧습니다."
+    },
+
+    {
+      "id": "q06", "paperId": "resnet", "type": "in_scope",
+      "question": "degradation problem이 뭔가요?",
+      "expectedChunks": ["1512.03385:s1:2", "1512.03385:s1:3"],
+      "expectedAnswer": "망을 깊게 쌓으면 정확도가 포화된 뒤 오히려 급격히 나빠지는 현상입니다. 과적합 때문이 아니며, 깊은 모델일수록 학습 오차 자체가 더 커집니다."
+    },
+    {
+      "id": "q07", "paperId": "resnet", "type": "in_scope",
+      "question": "residual learning의 핵심 아이디어를 설명해주세요.",
+      "expectedChunks": ["1512.03385:s3:0", "1512.03385:s3:1"],
+      "expectedAnswer": "쌓인 층이 목표 함수 H(x)를 직접 학습하게 하는 대신 잔차 F(x)=H(x)−x를 학습하게 하고, 원래 함수는 F(x)+x로 복원합니다. 잔차 쪽이 최적화하기 쉽다는 가설입니다."
+    },
+    {
+      "id": "q08", "paperId": "resnet", "type": "in_scope",
+      "question": "shortcut connection을 넣으면 파라미터나 연산량이 늘어나나요?",
+      "expectedChunks": ["1512.03385:s3:5"],
+      "expectedAnswer": "늘지 않습니다. 항등 shortcut은 추가 파라미터도 연산 복잡도도 만들지 않아서, plain 망과 residual 망을 같은 조건으로 공정하게 비교할 수 있습니다."
+    },
+    {
+      "id": "q09", "paperId": "resnet", "type": "in_scope",
+      "question": "입력과 출력의 차원이 다를 때는 shortcut을 어떻게 처리하나요?",
+      "expectedChunks": ["1512.03385:s3:6"],
+      "expectedAnswer": "차원이 같아야 그대로 더할 수 있고, 다를 경우 shortcut에 선형 사영(projection)을 적용해 차원을 맞춥니다."
+    },
+    {
+      "id": "q10", "paperId": "resnet", "type": "in_scope",
+      "question": "어떤 데이터셋으로 검증했나요?",
+      "expectedChunks": ["1512.03385:s1:6", "1512.03385:s1:7", "1512.03385:s1:8"],
+      "expectedAnswer": "ImageNet 분류 데이터셋에서 주로 검증했고, CIFAR-10에서도 같은 현상을 확인했습니다."
+    },
+
+    {
+      "id": "q11", "paperId": "llama", "type": "in_scope",
+      "question": "LLaMA는 학습 데이터로 무엇을 썼고 어떤 점이 다른가요?",
+      "expectedChunks": ["2302.13971:s1:3", "2302.13971:s2:1"],
+      "expectedAnswer": "공개된 데이터만 사용한 점이 Chinchilla·PaLM·GPT-3와 다릅니다. CommonCrawl·GitHub·위키피디아·책·arXiv·StackExchange 등 여러 공개 출처를 섞었습니다."
+    },
+    {
+      "id": "q12", "paperId": "llama", "type": "in_scope",
+      "question": "LLaMA 학습 데이터는 총 몇 토큰인가요?",
+      "expectedChunks": ["2302.13971:s2:10"],
+      "expectedAnswer": "토크나이징 후 약 1.4조(1.4T) 토큰입니다. 대부분 토큰은 학습 중 한 번만 쓰이고, 위키피디아와 책 도메인만 약 2 에폭 돕니다."
+    },
+    {
+      "id": "q13", "paperId": "llama", "type": "in_scope",
+      "question": "LLaMA가 기존 트랜스포머 구조에서 바꾼 부분은 무엇인가요?",
+      "expectedChunks": ["2302.13971:s2:12", "2302.13971:s2:13", "2302.13971:s2:14"],
+      "expectedAnswer": "세 가지입니다. 서브레이어 출력 대신 입력을 정규화하는 pre-normalization(RMSNorm), ReLU를 대체한 SwiGLU 활성함수, 절대 위치 임베딩을 뺀 자리에 넣은 회전 위치 임베딩(RoPE)."
+    },
+    {
+      "id": "q14", "paperId": "llama", "type": "in_scope",
+      "question": "LLaMA는 어느 정도 크기의 모델들인가요?",
+      "expectedChunks": ["2302.13971:abs:0"],
+      "expectedAnswer": "7B부터 65B 파라미터까지의 파운데이션 모델 모음입니다."
+    },
+    {
+      "id": "q15", "paperId": "llama", "type": "in_scope",
+      "question": "토크나이저는 무엇을 사용했나요?",
+      "expectedChunks": ["2302.13971:s2:9"],
+      "expectedAnswer": "SentencePiece 구현의 byte-pair encoding(BPE)을 사용했습니다."
+    },
+
+    {
+      "id": "q16", "paperId": "attention", "type": "out_of_scope",
+      "question": "GPT-4의 파라미터 수는 몇 개인가요?",
+      "expectedChunks": [],
+      "expectedAnswer": "이 논문에 근거가 없어 답할 수 없습니다.",
+      "note": "다른 모델에 대한 사실 — 모델이 배경지식으로 답해버리기 쉬운 대표 케이스"
+    },
+    {
+      "id": "q17", "paperId": "attention", "type": "out_of_scope",
+      "question": "Transformer로 주식 가격을 예측하려면 어떻게 해야 하나요?",
+      "expectedChunks": [],
+      "expectedAnswer": "이 논문에 근거가 없어 답할 수 없습니다.",
+      "note": "논문 범위 밖 응용 — 일반 지식으로 술술 답할 수 있어서 거절이 어려운 케이스"
+    },
+    {
+      "id": "q18", "paperId": "resnet", "type": "out_of_scope",
+      "question": "ResNet-50을 PyTorch로 구현한 코드를 보여주세요.",
+      "expectedChunks": [],
+      "expectedAnswer": "이 논문에 근거가 없어 답할 수 없습니다.",
+      "note": "원문에 코드가 없음"
+    },
+    {
+      "id": "q19", "paperId": "resnet", "type": "out_of_scope",
+      "question": "이 논문은 지금까지 몇 회 인용되었나요?",
+      "expectedChunks": [],
+      "expectedAnswer": "이 논문에 근거가 없어 답할 수 없습니다.",
+      "note": "인용수는 앱이 Semantic Scholar 메타데이터로 따로 보여주는 값이고 원문에는 없다. RAG가 메타데이터를 지어내지 않는지 보는 케이스"
+    },
+    {
+      "id": "q20", "paperId": "llama", "type": "out_of_scope",
+      "question": "저자들이 소속된 연구소의 연봉은 얼마인가요?",
+      "expectedChunks": [],
+      "expectedAnswer": "이 논문에 근거가 없어 답할 수 없습니다.",
+      "note": "논문과 완전 무관"
+    }
+  ]
+}

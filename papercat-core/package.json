@@ -1,0 +1,32 @@
+{
+  "name": "papercat-core",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "ingest": "tsx src/ingest/parse.ts",
+    "check": "tsx src/ingest/check.ts && tsx src/guard.check.ts && tsx src/judge.check.ts && tsx src/redteam.check.ts && tsx src/eval/goldenset.check.ts && tsx src/retrieve/search.check.ts",
+    "verifykey": "node --env-file=.env --experimental-strip-types src/verifykey.ts",
+    "probe": "node --env-file=.env --experimental-strip-types src/probe.ts",
+    "embed": "node --env-file=.env --experimental-strip-types src/ingest/embed.ts",
+    "eval:retrieval": "node --env-file=.env --experimental-strip-types src/eval/retrieval.ts",
+    "eval:generation": "node --env-file=.env --experimental-strip-types src/eval/generation.ts",
+    "eval:judge": "node --env-file=.env --experimental-strip-types src/eval/judge.ts",
+    "eval:redteam": "node --env-file=.env --experimental-strip-types src/eval/redteam.ts",
+    "chunk:compare": "node --env-file=.env --experimental-strip-types src/chunk/compare.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}

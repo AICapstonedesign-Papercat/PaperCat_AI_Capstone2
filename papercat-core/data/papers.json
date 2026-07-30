@@ -1,0 +1,5 @@
+[
+  { "id": "attention", "arxivId": "1706.03762", "title": "Attention Is All You Need", "field": "NLP" },
+  { "id": "resnet", "arxivId": "1512.03385", "title": "Deep Residual Learning for Image Recognition", "field": "CV" },
+  { "id": "llama", "arxivId": "2302.13971", "title": "LLaMA: Open and Efficient Foundation Language Models", "field": "NLP" }
+]
