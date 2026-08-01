@@ -82,6 +82,9 @@ yarn-error.log
 .env.local
 .env.*.local
 
-# Raw video candidates — not final, not for the repo (ad_video: 데모/피칭용, video: 아직 후보 선정 전)
+# ad_video: 데모/피칭용, 코드 레포 대상 아님
 assets/ad_video/
-assets/video/
+
+# video: 최종 선정된 온보딩.mp4만 커밋, 나머지 후보/미선정 클립은 제외
+assets/video/*
+!assets/video/온보딩.mp4
