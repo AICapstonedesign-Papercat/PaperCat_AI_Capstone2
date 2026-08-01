@@ -13,8 +13,8 @@ import type { ParamListBase } from '@react-navigation/native';
 type CatPose = 'wave' | 'reading';
 
 const poseMap: Record<CatPose, ImageSourcePropType> = {
-  wave: require('../assets/cat/cat-wave.png'),
-  reading: require('../assets/cat/pose-reading-book.png'),
+  wave: require('../assets/cat/hi.png'),
+  reading: require('../assets/cat/read_book.png'),
 };
 
 export function CatBubble({ pose = 'wave', children, size = 64 }: { pose?: CatPose; children: React.ReactNode; size?: number }) {
@@ -190,7 +190,7 @@ export function GuestBanner({ visible, onClose, navigation }: { visible: boolean
       <Pressable style={gb.overlay} onPress={onClose}>
         <Pressable style={gb.sheet} onPress={() => {}}>
           <View style={gb.handle} />
-          <Image source={require('../assets/cat/plush-cat.png')} style={gb.catImg} />
+          <Image source={require('../assets/cat/standard.png')} style={gb.catImg} />
           <Text style={gb.title}>가입하면 쓸 수 있어냥!</Text>
           <Text style={gb.desc}>한 줄 요약 · 토론 · Q&A 챗봇은{'\n'}가입 후 이용할 수 있어요</Text>
           <Pressable onPress={handleSignUp}>

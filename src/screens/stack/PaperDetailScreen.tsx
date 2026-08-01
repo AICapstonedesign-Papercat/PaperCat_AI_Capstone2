@@ -58,7 +58,7 @@ export default function PaperDetailScreen({ navigation, route }: Props) {
           <Text style={s.storyP}>옛날 옛적에 아주 긴 편지를 한 글자씩 차례대로 읽는 느림보 우편집배원이 있었습니다. 이 배달부는 편지의 첫 글자부터 마지막 글자까지 줄지어 한 걸음씩 걸어가야 했기 때문에, 문장이 조금만 길어져도 편지를 모두 전하는 데 너무 오랜 시간이 걸렸습니다.</Text>
           <Text style={s.storyP}>특히 먼 거리에 있는 중요한 단어들 사이의 관계를 파악할 때는 길고 험난한 과정을 거쳐야만 했습니다.</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 16, gap: 12 }}>
-            <Image source={require('../../../assets/cat/cat-reading-story.png')} style={{ width: 100, height: 100 }} resizeMode="contain" />
+            <Image source={require('../../../assets/cat/read_book.png')} style={{ width: 100, height: 100 }} resizeMode="contain" />
             <Text style={{ flex: 1, fontSize: 13, fontFamily: 'Pretendard-Regular', color: colors.muted, lineHeight: 20, fontStyle: 'italic' }}>그때, 트랜스포머라는 똑똑한 새 배달부가 나타났습니다...</Text>
           </View>
           <Text style={[s.storyP, { color: colors.text, fontFamily: 'Pretendard-Regular', fontStyle: 'italic' }]}>

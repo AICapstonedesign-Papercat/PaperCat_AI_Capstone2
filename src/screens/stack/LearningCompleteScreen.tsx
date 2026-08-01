@@ -145,7 +145,7 @@ export default function LearningCompleteScreen({ navigation, route }: Props) {
         {/* Cat + speech — CatBubble's inline text variant, no white border box */}
         <Animated.View style={[s.catRow, readingWidth, { transform: [{ scale: catScale }] }]}>
           <Animated.Image
-            source={require('../../../assets/cat/cat-wave.png')}
+            source={require('../../../assets/cat/congrat.png')}
             style={s.catImg}
           />
           {/* Speech: plain text beside cat, no white-bordered bubble */}

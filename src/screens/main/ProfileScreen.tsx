@@ -38,7 +38,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
           {/* Figma: 점선 테두리 히어로 카드 — 아바타 + 이름·레벨 + 성격 + XP바 */}
           <View style={s.heroCard}>
-            <Image source={require('../../../assets/cat/cat-wave.png')} style={s.avatar} resizeMode="contain" />
+            <Image source={require('../../../assets/cat/hi.png')} style={s.avatar} resizeMode="contain" />
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
                 <Text style={s.nick}>{state.catName}</Text>

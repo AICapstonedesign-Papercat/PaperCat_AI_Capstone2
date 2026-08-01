@@ -101,7 +101,7 @@ export default function CollectionScreen({ navigation }: Props) {
             ))}
           </View>
           <View style={s.banner}>
-            <Image source={require('../../../assets/cat/plush-cat.png')} style={s.bannerCat} />
+            <Image source={require('../../../assets/cat/standard.png')} style={s.bannerCat} />
             <Text style={s.bannerText}><Text style={s.bannerAccent}>CV</Text>도 도전해봐냥!</Text>
           </View>
         </View>

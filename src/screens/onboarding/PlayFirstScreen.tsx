@@ -31,7 +31,7 @@ export default function PlayFirstScreen({ navigation }: Props) {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={[s.body, isWide && s.bodyWide]}>
         <Image
-          source={require('../../../assets/cat/hero-front.png')}
+          source={require('../../../assets/cat/study_with_ipad.png')}
           style={[s.hero, isWide ? s.heroWide : s.heroNarrow]}
           resizeMode="contain"
         />

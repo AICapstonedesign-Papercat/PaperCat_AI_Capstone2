@@ -38,7 +38,7 @@ export default function HomeScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
           {/* 마스코트 + 인사 한 줄 + 하트 */}
           <View style={s.heroRow}>
-            <Image source={require('../../../assets/cat/cat-wave.png')} style={s.mascot} resizeMode="contain" />
+            <Image source={require('../../../assets/cat/hi.png')} style={s.mascot} resizeMode="contain" />
             <View style={{ flex: 1 }}>
               <Text style={s.greeting}>{state.isGuest ? '환영한다냥!!' : '오늘도 왔다냥!!'}</Text>
               {!state.isGuest && (

@@ -20,7 +20,7 @@ export default function SplashScreen({ brand = 'papercat' }: { brand?: string })
     <View style={s.container}>
       <Animated.View style={{ transform: [{ translateY: floatY }] }}>
         <Image
-          source={require('../../../assets/cat/splash-cat.png')}
+          source={require('../../../assets/cat/standard.png')}
           style={s.cat}
           resizeMode="contain"
         />

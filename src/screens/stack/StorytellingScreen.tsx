@@ -30,7 +30,7 @@ export default function StorytellingScreen({ navigation }: Props) {
           <View style={[s.headRow, isWide && s.headRowWide]}>
             <Text style={[s.bigTitle, isWide && { flex: 1 }]}>Self-Attention이 세상을 바꾼 날</Text>
             <View style={s.mascotRing}>
-              <Image source={require('../../../assets/cat/cat-wave.png')} style={s.mascot} resizeMode="contain" />
+              <Image source={require('../../../assets/cat/hi.png')} style={s.mascot} resizeMode="contain" />
             </View>
           </View>
 
@@ -47,7 +47,7 @@ export default function StorytellingScreen({ navigation }: Props) {
           </View>
 
           <View style={s.whisper}>
-            <Image source={require('../../../assets/cat/pose-thinking.png')} style={s.whisperIcon} resizeMode="contain" />
+            <Image source={require('../../../assets/cat/concern.png')} style={s.whisperIcon} resizeMode="contain" />
             <View style={{ flex: 1 }}>
               <Text style={s.whisperLabel}>냥이의 속삭임</Text>
               <Text style={s.whisperText}>

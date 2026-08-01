@@ -81,3 +81,7 @@ yarn-error.log
 .env
 .env.local
 .env.*.local
+
+# Raw video candidates — not final, not for the repo (ad_video: 데모/피칭용, video: 아직 후보 선정 전)
+assets/ad_video/
+assets/video/
