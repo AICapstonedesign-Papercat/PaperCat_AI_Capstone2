@@ -17,7 +17,8 @@ const DIAG = Math.sqrt(width * width + height * height);
 // 캡디1(App.js)의 원형 리빌 스플래시를 이식. 원본은 expo-font의 fontsLoaded를 기다렸다가
 // 스플래시를 시작했는데, bare RN은 Info.plist로 링크한 폰트를 동기적으로 쓸 수 있어서
 // 그 게이트는 불필요 — 마운트되자마자 바로 타이머 시작.
-// TODO(expo-av): 0.7초 시점 냐옹 소리 재생 로직 미이식 (expo-av 없음, 오디오 라이브러리 도입 시 추가)
+// 둥둥 뜨는 정지 이미지 대신 온보딩.mp4(react-native-video)로 교체 — 임베디드 오디오가
+// 캡디1의 "0.7초 냐옹" 역할을 대신함.
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
   const [showSplash, setShowSplash] = useState(true);

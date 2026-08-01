@@ -1,30 +1,20 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, Animated, StyleSheet, Dimensions } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import Video from 'react-native-video';
 import { colors } from '../../theme/tokens';
 
 const { height } = Dimensions.get('window');
 
 export default function SplashScreen({ brand = 'papercat' }: { brand?: string }) {
-  const floatY = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatY, { toValue: -12, duration: 1200, useNativeDriver: true }),
-        Animated.timing(floatY, { toValue: 0,   duration: 1200, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
-
   return (
     <View style={s.container}>
-      <Animated.View style={{ transform: [{ translateY: floatY }] }}>
-        <Image
-          source={require('../../../assets/cat/standard.png')}
-          style={s.cat}
-          resizeMode="contain"
-        />
-      </Animated.View>
+      <Video
+        source={require('../../../assets/video/온보딩.mp4')}
+        style={s.video}
+        resizeMode="contain"
+        repeat
+        playInBackground={false}
+      />
 
       <Text style={s.brand}>{brand}</Text>
     </View>
@@ -38,7 +28,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cat: { width: 280, height: 280 },
+  video: { width: 280, height: 280 },
   brand: {
     position: 'absolute',
     bottom: height * 0.15,
