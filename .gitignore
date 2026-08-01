@@ -85,6 +85,7 @@ yarn-error.log
 # ad_video: 데모/피칭용, 코드 레포 대상 아님
 assets/ad_video/
 
-# video: 최종 선정된 온보딩.mp4만 커밋, 나머지 후보/미선정 클립은 제외
+# video: 최종 선정된 onboarding.mp4만 커밋, 나머지 후보/미선정 클립은 제외
+# (한글 파일명은 Metro 에셋 리졸버가 NFC/NFD 정규화 불일치로 못 찾아서 영문명 사용)
 assets/video/*
-!assets/video/온보딩.mp4
+!assets/video/onboarding.mp4

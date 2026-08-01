@@ -9,7 +9,7 @@ export default function SplashScreen({ brand = 'papercat' }: { brand?: string })
   return (
     <View style={s.container}>
       <Video
-        source={require('../../../assets/video/온보딩.mp4')}
+        source={require('../../../assets/video/onboarding.mp4')}
         style={s.video}
         resizeMode="contain"
         repeat
