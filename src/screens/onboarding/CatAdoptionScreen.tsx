@@ -11,7 +11,7 @@ type Props = NativeStackScreenProps<ParamListBase>;
 
 const NAMES = ['식빵', '치즈', '코코', '모찌', '꼬미', '나비', '두부', '단추', '망고', '버터'];
 const PERS_CAT: Record<string, any> = {
-  curious:    require('../../../assets/cat/surprise.png'),
+  curious:    require('../../../assets/cat/cat-sit.png'),
   calm:       require('../../../assets/cat/cat-calm.png'),
   passionate: require('../../../assets/cat/cat-passionate.png'),
   chill:      require('../../../assets/cat/cat-chill.png'),

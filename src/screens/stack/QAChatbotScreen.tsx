@@ -71,7 +71,7 @@ export default function QAChatbotScreen({ navigation }: Props) {
       {/* Nav bar — hairline bottom, no box */}
       <View style={s.nav}>
         <Pressable style={s.back} onPress={() => navigation.goBack()}><Feather name="chevron-left" size={22} color={colors.ink} /></Pressable>
-        <Image source={require('../../../assets/cat/concern.png')} style={{ width: 36, height: 36, marginRight: 8, resizeMode: 'contain' }} />
+        <Image source={require('../../../assets/cat/study_with_ipad_right.png')} style={{ width: 36, height: 36, marginRight: 8, resizeMode: 'contain' }} />
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Q&A 챗봇</Text>
           <Text style={s.sub}>식빵이가 답해줄게요</Text>
@@ -85,7 +85,7 @@ export default function QAChatbotScreen({ navigation }: Props) {
             m.who === 'cat' ? (
               /* Bot message: cat image + text directly on bg, hairline border only */
               <View key={i} style={s.catRow}>
-                <Image source={require('../../../assets/cat/concern.png')} style={{ width: 34, height: 34, resizeMode: 'contain' }} />
+                <Image source={require('../../../assets/cat/study_with_ipad_right.png')} style={{ width: 34, height: 34, resizeMode: 'contain' }} />
                 <View style={s.catBubble}><Text style={s.catText}>{m.text}</Text></View>
               </View>
             ) : (

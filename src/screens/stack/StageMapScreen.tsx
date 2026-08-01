@@ -71,7 +71,7 @@ export default function StageMapScreen({ navigation, route }: Props) {
                     )}
                     <View style={[s.badge, isDone && s.badgeDone, isActive && s.badgeActive, isLocked && s.badgeLocked]}>
                       {isActive ? (
-                        <Image source={require('../../../assets/cat/hi.png')} style={s.mascot} resizeMode="contain" />
+                        <Image source={require('../../../assets/cat/surprise.png')} style={s.mascot} resizeMode="contain" />
                       ) : (
                         <Feather
                           name={isDone ? 'check' : 'lock'}

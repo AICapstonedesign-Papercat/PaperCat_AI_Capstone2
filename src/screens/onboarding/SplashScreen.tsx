@@ -1,41 +1,22 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Video from 'react-native-video';
 import { colors } from '../../theme/tokens';
 
-const { height } = Dimensions.get('window');
-
-export default function SplashScreen({ brand = 'papercat' }: { brand?: string }) {
+export default function SplashScreen({ onEnd }: { onEnd?: () => void }) {
   return (
     <View style={s.container}>
       <Video
         source={require('../../../assets/video/onboarding.mp4')}
-        style={s.video}
-        resizeMode="contain"
-        repeat
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
         playInBackground={false}
+        onEnd={onEnd}
       />
-
-      <Text style={s.brand}>{brand}</Text>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  video: { width: 280, height: 280 },
-  brand: {
-    position: 'absolute',
-    bottom: height * 0.15,
-    color: '#FFFFFF',
-    fontSize: 42,
-    fontFamily: 'SUIT-Medium',
-    fontWeight: undefined,
-    letterSpacing: -1,
-  },
+  container: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.accent },
 });

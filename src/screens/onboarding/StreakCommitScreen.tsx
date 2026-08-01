@@ -40,7 +40,7 @@ export default function StreakCommitScreen({ navigation }: Props) {
 
       <View style={[s.body, isWide && s.bodyWide]}>
         {isWide && (
-          <Image source={require('../../../assets/cat/standard.png')} style={s.mascot} resizeMode="contain" />
+          <Image source={require('../../../assets/cat/info.png')} style={s.mascot} resizeMode="contain" />
         )}
 
         <View style={[s.copy, isWide && s.copyWide]}>

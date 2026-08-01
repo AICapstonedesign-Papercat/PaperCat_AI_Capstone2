@@ -10,11 +10,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
 // 실제로 pose= 로 쓰이는 값만 유지(wave는 기본값) — 나머지는 자산이 삭제됨
-type CatPose = 'wave' | 'reading';
+type CatPose = 'wave' | 'reading' | 'concern';
 
 const poseMap: Record<CatPose, ImageSourcePropType> = {
   wave: require('../assets/cat/hi.png'),
   reading: require('../assets/cat/read_book.png'),
+  concern: require('../assets/cat/concern.png'),
 };
 
 export function CatBubble({ pose = 'wave', children, size = 64 }: { pose?: CatPose; children: React.ReactNode; size?: number }) {

@@ -32,7 +32,7 @@ export default function PaperDetailScreen({ navigation, route }: Props) {
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
-        <CatBubble pose="reading" size={56}>이 논문 풀어보자냥!</CatBubble>
+        <CatBubble pose="concern" size={56}>이 논문 풀어보자냥!</CatBubble>
       </View>
 
       <View style={centerColumn}>
