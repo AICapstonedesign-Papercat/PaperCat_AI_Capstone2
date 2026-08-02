@@ -1,5 +1,7 @@
 # Paper Cat — iPad 앱 (React Native)
 
+▶️ [온보딩 영상 미리보기](assets/video/onboarding.mp4) — 클릭하면 GitHub 뷰어에서 바로 재생돼요.
+
 고양이를 키우며 논문을 학습하는 게이미피케이션 모바일 앱 서비스.
 [캡스톤1](https://github.com/itsinseong/PaperCat_AI_Capstone1)(Expo, 가짜 데이터 목업)의 화면 설계를 계승해, iPad를 메인 타겟으로 확장하고 실제 논문 데이터·실 LLM 연동을 붙이는 캡스톤2 프로젝트입니다.
 
