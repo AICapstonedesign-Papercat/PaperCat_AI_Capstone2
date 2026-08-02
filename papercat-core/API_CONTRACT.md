@@ -17,14 +17,15 @@
 
 | 항목 | 상태 |
 |---|---|
-| 이메일 회원가입·로그인 | Supabase Auth, 동작 확인 |
-| `profiles` 테이블 | 레벨·XP·스트릭·성격·주간목표 |
-| `paper_progress` 테이블 | 논문별 진행도 upsert |
-| `summary_challenges` 테이블 | 요약 제출 기록 + 점수 |
-| Edge Function `papercat-ai` | `{prompt, taskType}` → Gemini → `{reply}` |
-| Q&A 화면 연동 | `QAChatbotScreen`이 실제 호출 중 |
+| 이메일 회원가입·로그인 | **동작함.** 6개 화면에서 `supabase.auth` 직접 사용(Login/SignUp/Home/Profile/StreakCommit/CatAdoption) |
+| `src/lib/supabase.js` 헬퍼 6종 | **정의만 됨 — 호출하는 화면 0개.** `fetchUserProfile`·`updateUserProfile`·`upsertPaperProgress`·`saveSummaryResult`·`updateWeeklyGoal`·`fetchAIResponse` |
+| Edge Function `papercat-ai` | **배포됨 — 호출하는 화면 0개.** `{prompt, taskType}` → Gemini → `{reply}` |
+| DB 테이블 | 헬퍼가 `profiles`/`paper_progress`/`summary_challenges`를 참조하나, **레포에 마이그레이션 없음** → 스키마가 Supabase 대시보드에만 존재(코드로 재현·리뷰 불가) |
+| Q&A 화면 | 아직 `FAKE_REPLIES` 키워드 매칭 (AI 미연결) |
+| 요약 채점 화면 | 아직 로컬 목업 점수 |
 
-DB 스키마·Auth는 그대로 쓰면 됩니다. 아래는 **Edge Function 쪽만** 바꾸는 얘기입니다.
+**정리: 인증만 끝에서 끝까지 동작하고, 나머지는 배선 전 상태입니다.** Edge Function도 DB 헬퍼도
+만들어져 있지만 아무 화면도 부르지 않습니다. 아래는 그 배선을 어떤 모양으로 할지에 대한 얘기예요.
 
 ---
 
