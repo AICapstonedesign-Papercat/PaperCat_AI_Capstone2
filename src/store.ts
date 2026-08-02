@@ -7,6 +7,12 @@ const KEY = '@papercat/state/v2';
 export type PaperCatState = {
   onboardingDone: boolean;
   isGuest: boolean;
+  hasSeenHomeTour: boolean;
+  hasSeenExploreTour: boolean;
+  hasSeenStudyTour: boolean;
+  hasSeenCollectionTour: boolean;
+  hasSeenProfileTour: boolean;
+  showOnboardingVideo: boolean;
   catName: string;
   personality: 'curious' | 'calm' | 'passionate' | 'chill';
   aiLevel: 'beginner' | 'intermediate';
@@ -30,6 +36,12 @@ export type PaperCatState = {
 const DEFAULT: PaperCatState = {
   onboardingDone: false,
   isGuest: false,
+  hasSeenHomeTour: false,
+  hasSeenExploreTour: false,
+  hasSeenStudyTour: false,
+  hasSeenCollectionTour: false,
+  hasSeenProfileTour: false,
+  showOnboardingVideo: true,
   catName: '식빵',
   personality: 'curious',
   aiLevel: 'beginner',

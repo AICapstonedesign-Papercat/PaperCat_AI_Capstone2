@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, Image, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/tokens';
-import { ProgressBar, Divider, GuestLockOverlay } from '../../components';
+import { ProgressBar, Divider, GuestLockOverlay, SpotlightTour, type TourStep } from '../../components';
 import { useStore } from '../../store';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
@@ -10,6 +10,13 @@ import type { ParamListBase } from '@react-navigation/native';
 type Props = NativeStackScreenProps<ParamListBase>;
 
 const CATS = ['전체', 'NLP', 'CV', 'RL', '생성AI'];
+
+const TOUR_STEPS: TourStep[] = [
+  { target: 'catTabs', title: '분야 필터', desc: 'NLP · CV · RL · 생성AI로 모은 배지를 좁혀볼 수 있어요.' },
+  { target: 'grid', title: '수집한 배지', desc: '논문을 완독하면 등급(S/Normal) 배지로 여기 채워져요. ? 카드는 아직 안 읽은 논문이에요. 탭하면 논문 상세로 이동해요.' },
+  { target: 'stats', title: '분야별 학습 비율', desc: '지금까지 어떤 분야를 얼마나 읽었는지 비율로 보여줘요.' },
+  { target: 'rail', title: '왼쪽 메뉴', desc: '홈 · 탐색 · 학습 · 프로필로 여기서 이동해요.' },
+];
 
 type Item = {
   id: string;
@@ -36,15 +43,27 @@ export default function CollectionScreen({ navigation }: Props) {
   const [cat, setCat] = useState('전체');
   const [state, set] = useStore();
 
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const catTabsRef = useRef<View>(null);
+  const gridRef = useRef<View>(null);
+  const statsRef = useRef<View>(null);
+  const targetRefs = { catTabs: catTabsRef, grid: gridRef, stats: statsRef };
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        onScroll={e => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
+      >
         <View style={s.head}>
           <View>
             <Text style={s.h1}>내 도감</Text>
             <Text style={s.countText}><Text style={s.countNum}>12</Text>편 수집 · 다음 배지까지 논문 1편</Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 18 }}>
+          <View ref={catTabsRef} style={{ flexDirection: 'row', gap: 18 }}>
             {CATS.map(c => (
               <Pressable key={c} onPress={() => setCat(c)}>
                 <Text style={[s.tabText, cat === c && s.tabTextOn]}>{c}</Text>
@@ -53,7 +72,7 @@ export default function CollectionScreen({ navigation }: Props) {
           </View>
         </View>
 
-        <View style={s.grid}>
+        <View ref={gridRef} style={s.grid}>
           {ITEMS.filter(it => cat === '전체' || it.cat === cat).map(it => {
             if (!it.grade) {
               return (
@@ -89,7 +108,7 @@ export default function CollectionScreen({ navigation }: Props) {
         <Divider style={{ marginTop: 8, marginBottom: 20 }} />
 
         {/* Figma 그대로 — 학습비율 3줄 옆에 마스코트 배너를 나란히(우측) 배치 */}
-        <View style={s.statsRow}>
+        <View ref={statsRef} style={s.statsRow}>
           <View style={{ flex: 1 }}>
             <Text style={s.statsTitle}>분야별 학습 비율</Text>
             {[{ l: 'NLP', v: 0.6 }, { l: 'CV', v: 0.3 }, { l: 'RL', v: 0.1 }].map((r) => (
@@ -106,6 +125,16 @@ export default function CollectionScreen({ navigation }: Props) {
           </View>
         </View>
       </ScrollView>
+
+      {!state.hasSeenCollectionTour && (
+        <SpotlightTour
+          steps={TOUR_STEPS}
+          targetRefs={targetRefs}
+          scrollRef={scrollRef}
+          scrollY={scrollY}
+          onDone={() => set({ hasSeenCollectionTour: true })}
+        />
+      )}
       {state.isGuest && <GuestLockOverlay navigation={navigation} />}
     </SafeAreaView>
   );

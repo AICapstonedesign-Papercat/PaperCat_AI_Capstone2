@@ -1,7 +1,7 @@
 // 캡디1(PaperCat_AI_Capstone1/src/components.js) 이식. Expo 전용 패키지만 bare RN 대체재로 교체:
 // @expo/vector-icons/Feather → react-native-vector-icons/Feather, expo-linear-gradient → react-native-linear-gradient.
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, StyleSheet, Animated, Modal, Pressable, ImageSourcePropType } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, Image, ScrollView, StyleSheet, Animated, Modal, Pressable, Dimensions, ImageSourcePropType } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import LinearGradient from 'react-native-linear-gradient';
 import { colors, radius } from './theme/tokens';
@@ -135,6 +135,107 @@ const section = StyleSheet.create({
   title: { fontSize: 13, fontFamily: 'Pretendard-SemiBold', color: colors.muted, letterSpacing: 0.3 },
   right: { fontSize: 12, fontFamily: 'Pretendard-Medium', color: colors.accent, letterSpacing: 0.4 },
   rule: { height: 1, backgroundColor: colors.hairline, marginBottom: 14 },
+});
+
+// 첫 방문 탭마다 쓰는 공용 스포트라이트 투어. 반투명 딤 위에 실제 요소 위치(measureInWindow)를
+// 정확히 감싸는 밝은 테두리 박스를 얹고, 그 박스를 탭하면 다음 단계로 넘어간다.
+// target: 'rail'은 SideRail(고정 폭 96, 다른 컴포넌트 트리라 실측 불가)만 쓰는 특수 케이스 —
+// 나머지 target은 각 화면이 넘긴 targetRefs 키와 맞아야 한다.
+const RAIL_WIDTH = 96;
+
+export type TourStep = { target: string; title: string; desc: string };
+type TourBox = { x: number; y: number; width: number; height: number };
+
+export function SpotlightTour({
+  steps, targetRefs, scrollRef, scrollY, onDone,
+}: {
+  steps: TourStep[];
+  targetRefs: Record<string, React.RefObject<View | null>>;
+  scrollRef?: React.RefObject<ScrollView | null>;
+  scrollY?: React.RefObject<number>;
+  onDone: () => void;
+}) {
+  const [i, setI] = useState(0);
+  const [box, setBox] = useState<TourBox | null>(null);
+  const step = steps[i];
+  const last = i === steps.length - 1;
+
+  useEffect(() => {
+    if (step.target === 'rail') {
+      setBox({ x: 0, y: 0, width: RAIL_WIDTH, height: Dimensions.get('window').height });
+      return;
+    }
+    const ref = targetRefs[step.target];
+    if (!ref?.current) { setBox(null); return; }
+
+    ref.current.measureInWindow((x, y, width, height) => {
+      const screenH = Dimensions.get('window').height;
+      const TOP_MARGIN = 90, BOTTOM_MARGIN = 260; // 아래쪽에 설명 카드 놓을 자리 확보
+      if (scrollRef && (y < TOP_MARGIN || y + height > screenH - BOTTOM_MARGIN)) {
+        const delta = y - TOP_MARGIN;
+        scrollRef.current?.scrollTo({ y: (scrollY?.current ?? 0) + delta, animated: true });
+        setTimeout(() => ref.current?.measureInWindow((x2, y2, w2, h2) => setBox({ x: x2, y: y2, width: w2, height: h2 })), 380);
+      } else {
+        setBox({ x, y, width, height });
+      }
+    });
+  }, [i, step.target, targetRefs, scrollRef, scrollY]);
+
+  const next = () => (last ? onDone() : setI(i + 1));
+
+  const screenH = Dimensions.get('window').height;
+  const screenW = Dimensions.get('window').width;
+  const cardTop = box ? Math.min(box.y + box.height + 16, screenH - 220) : screenH / 2 - 100;
+  const cardLeft = box ? Math.max(16, Math.min(box.x, screenW - 316)) : 24;
+
+  return (
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onDone}>
+      <View style={StyleSheet.absoluteFill}>
+        <View style={tour.dim} />
+
+        {box && (
+          <Pressable
+            onPress={next}
+            style={[tour.spot, { left: box.x, top: box.y, width: box.width, height: box.height }]}
+          />
+        )}
+
+        <Pressable style={tour.skip} onPress={onDone}>
+          <Text style={tour.skipText}>튜토리얼 건너뛰기</Text>
+        </Pressable>
+
+        <View style={[tour.card, { top: cardTop, left: cardLeft }]}>
+          <Text style={tour.stepLabel}>{i + 1} / {steps.length}</Text>
+          <Text style={tour.title}>{step.title}</Text>
+          <Text style={tour.desc}>{step.desc}</Text>
+          <Pressable style={tour.next} onPress={next}>
+            <Text style={tour.nextText}>{last ? '시작하기' : '다음 →'}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const tour = StyleSheet.create({
+  dim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,15,10,0.6)' },
+  spot: {
+    position: 'absolute', borderRadius: 14, borderWidth: 2, borderColor: colors.accent,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  skip: {
+    position: 'absolute', top: 24, right: 20,
+    paddingHorizontal: 22, paddingVertical: 14, borderRadius: 999,
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border,
+    shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 4,
+  },
+  skipText: { fontSize: 17, fontFamily: 'Pretendard-Bold', color: colors.ink },
+  card: { position: 'absolute', width: 300, backgroundColor: colors.surface, borderRadius: 18, padding: 20 },
+  stepLabel: { fontSize: 11, fontFamily: 'Pretendard-Bold', color: colors.accent, letterSpacing: 0.5, marginBottom: 8 },
+  title: { fontSize: 16, fontFamily: 'Pretendard-Bold', color: colors.ink, marginBottom: 6 },
+  desc: { fontSize: 13, fontFamily: 'Pretendard-Regular', color: colors.muted, lineHeight: 19, marginBottom: 16 },
+  next: { height: 44, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.accent },
+  nextText: { color: '#fff', fontFamily: 'Pretendard-Bold', fontSize: 14 },
 });
 
 // XP burst animation — "+XP" flying up and fading out

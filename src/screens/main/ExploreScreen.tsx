@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../theme/tokens';
-import { GradeBadge } from '../../components';
+import { GradeBadge, SpotlightTour, type TourStep } from '../../components';
+import { useStore } from '../../store';
 import { PAPERS, type Paper } from '../../data/papers';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
@@ -13,15 +14,32 @@ type Props = NativeStackScreenProps<ParamListBase>;
 
 const CATS = ['전체', 'NLP', 'CV', 'RL', '생성AI'];
 
+const TOUR_STEPS: TourStep[] = [
+  { target: 'search', title: '검색', desc: '논문 제목·저자·키워드로 바로 찾을 수 있어요.' },
+  { target: 'mode', title: 'CLASSIC · TRENDY', desc: 'CLASSIC은 인용수 기준 정렬, TRENDY는 최신성(70%)+인용수(30%) 가중 랭킹이에요. 탭해서 바꿔요.' },
+  { target: 'cat', title: '분야 필터', desc: 'NLP · CV · RL · 생성AI 분야별로 목록을 좁힐 수 있어요.' },
+  { target: 'list', title: '논문 목록', desc: '탭하면 해당 논문 상세 화면으로 들어가요. 🔥 표시는 인용 100회 이상이에요.' },
+  { target: 'rail', title: '왼쪽 메뉴', desc: '홈 · 학습 · 도감 · 프로필로 여기서 이동해요.' },
+];
+
 export const GRADE_COLORS = {
   S:      { bg: colors.yellowBg, fg: colors.yellowText },
   Normal: { bg: colors.panel,    fg: colors.muted },
 };
 
 export default function ExploreScreen({ navigation }: Props) {
+  const [state, set] = useStore();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('전체');
   const [mode, setMode] = useState('classic'); // 'classic' | 'trendy'
+
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const searchRef = useRef<View>(null);
+  const modeRef = useRef<View>(null);
+  const catRef = useRef<View>(null);
+  const listRef = useRef<View>(null);
+  const targetRefs = { search: searchRef, mode: modeRef, cat: catRef, list: listRef };
 
   const list = PAPERS
     .filter(p =>
@@ -40,11 +58,16 @@ export default function ExploreScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        onScroll={e => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
+      >
         <Text style={s.h1}>탐색</Text>
 
         {/* Search */}
-        <View style={s.search}>
+        <View ref={searchRef} style={s.search}>
           <Feather name="search" size={18} color={colors.muted} />
           <TextInput
             placeholder="논문 제목·저자·키워드"
@@ -55,7 +78,7 @@ export default function ExploreScreen({ navigation }: Props) {
         </View>
 
         {/* Classic / Trendy — underline toggle */}
-        <View style={s.modeTabsWrap}>
+        <View ref={modeRef} style={s.modeTabsWrap}>
           <View style={{ flexDirection: 'row', gap: 22 }}>
             {[{ id: 'classic', label: 'CLASSIC', icon: 'award',       sub: '인용 100k+ → S등급\n그 이하 → Normal' },
               { id: 'trendy',  label: 'TRENDY',  icon: 'trending-up', sub: '연도 70% + 인용수 30%\n최신성 가중 랭킹' }].map(t => (
@@ -71,17 +94,20 @@ export default function ExploreScreen({ navigation }: Props) {
         </View>
 
         {/* Category — underline tabs */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.catTabsWrap}>
-          <View style={{ flexDirection: 'row', gap: 22, paddingRight: 20 }}>
-            {CATS.map(c => (
-              <Pressable key={c} onPress={() => setCat(c)} style={[s.catTab, cat === c && s.catTabOn]}>
-                <Text style={[s.catText, cat === c && s.catTextOn]}>{c}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </ScrollView>
+        <View ref={catRef} style={s.catTabsWrap}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={{ flexDirection: 'row', gap: 22, paddingRight: 20 }}>
+              {CATS.map(c => (
+                <Pressable key={c} onPress={() => setCat(c)} style={[s.catTab, cat === c && s.catTabOn]}>
+                  <Text style={[s.catText, cat === c && s.catTextOn]}>{c}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
 
         {/* List */}
+        <View ref={listRef}>
         {list.map((p, i) => (
           <Pressable key={p.id} onPress={() => navigation.navigate('PaperDetail', { paperId: p.id })}>
             <View style={[s.row, i > 0 && s.rowBorder]}>
@@ -102,7 +128,18 @@ export default function ExploreScreen({ navigation }: Props) {
         {list.length === 0 && (
           <Text style={{ textAlign: 'center', color: colors.muted, marginTop: 40 }}>결과가 없어요</Text>
         )}
+        </View>
       </ScrollView>
+
+      {!state.hasSeenExploreTour && (
+        <SpotlightTour
+          steps={TOUR_STEPS}
+          targetRefs={targetRefs}
+          scrollRef={scrollRef}
+          scrollY={scrollY}
+          onDone={() => set({ hasSeenExploreTour: true })}
+        />
+      )}
     </SafeAreaView>
   );
 }

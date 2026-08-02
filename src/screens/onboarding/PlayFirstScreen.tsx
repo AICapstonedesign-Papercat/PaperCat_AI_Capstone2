@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Image, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Image, Animated, Easing, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radius } from '../../theme/tokens';
 import { useStore } from '../../store';
@@ -22,6 +22,36 @@ export default function PlayFirstScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
 
+  // 둥둥 떠다니는 느낌 — 상하 bob + 살짝 좌우 흔들림을 서로 다른 주기로 겹쳐서 기계적으로 안 보이게
+  const bobY = useRef(new Animated.Value(0)).current;
+  const sway = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const bobLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bobY, { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bobY, { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    const swayLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(sway, { toValue: 1, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(sway, { toValue: -1, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(sway, { toValue: 0, duration: 1300, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    bobLoop.start();
+    swayLoop.start();
+    return () => { bobLoop.stop(); swayLoop.stop(); };
+  }, [bobY, sway]);
+
+  const heroAnimatedStyle = {
+    transform: [
+      { translateY: bobY.interpolate({ inputRange: [0, 1], outputRange: [0, -16] }) },
+      { rotate: sway.interpolate({ inputRange: [-1, 1], outputRange: ['-3deg', '3deg'] }) },
+    ],
+  };
+
   const tryAsGuest = () => {
     set({ onboardingDone: true, isGuest: true });
     navigation.replace('Tabs');
@@ -30,9 +60,9 @@ export default function PlayFirstScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={[s.body, isWide && s.bodyWide]}>
-        <Image
+        <Animated.Image
           source={require('../../../assets/cat/study_with_ipad_right.png')}
-          style={[s.hero, isWide ? s.heroWide : s.heroNarrow]}
+          style={[s.hero, isWide ? s.heroWide : s.heroNarrow, heroAnimatedStyle]}
           resizeMode="contain"
         />
 
@@ -52,7 +82,7 @@ export default function PlayFirstScreen({ navigation }: Props) {
             ))}
           </View>
 
-          <Pressable style={s.cta} onPress={() => navigation.navigate('CatAdoption')}>
+          <Pressable style={s.cta} onPress={() => navigation.navigate('Auth')}>
             <Text style={s.ctaText}>시작하기 →</Text>
           </Pressable>
           <Pressable style={s.guest} onPress={tryAsGuest}>

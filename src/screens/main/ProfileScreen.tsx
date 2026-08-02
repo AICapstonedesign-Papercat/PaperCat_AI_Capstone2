@@ -1,17 +1,26 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, Image, ScrollView, Pressable, StyleSheet, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors } from '../../theme/tokens';
-import { ProgressBar, SectionTitle, GuestLockOverlay } from '../../components';
+import { ProgressBar, SectionTitle, GuestLockOverlay, SpotlightTour, type TourStep } from '../../components';
 import { useStore, resetStore } from '../../store';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
+const TOUR_STEPS: TourStep[] = [
+  { target: 'hero', title: '캐릭터 시트', desc: '내 고양이 이름·레벨·성격과 다음 레벨까지 남은 XP를 볼 수 있어요.' },
+  { target: 'stats', title: '내 통계', desc: '완독 논문·연속 학습일·누적 XP·도전 과제 승률을 한눈에 봐요.' },
+  { target: 'badges', title: '배지 슬롯', desc: '조건을 채우면 배지가 열려요. 흐린 슬롯은 아직 잠긴 배지예요.' },
+  { target: 'settings', title: '설정', desc: '알림·다크모드·온보딩 영상·주간 목표·관심 분야·AI 지식수준을 여기서 바꿀 수 있어요.' },
+  { target: 'rail', title: '왼쪽 메뉴', desc: '홈 · 탐색 · 학습 · 도감으로 여기서 이동해요.' },
+];
+
 const PERS_LABEL: Record<string, string> = { curious: '호기심 많은 논문 탐험가', calm: '차분한 논문 탐험가', passionate: '열정 넘치는 논문 탐험가', chill: '여유로운 논문 탐험가' };
-const AI_LEVEL_LABEL: Record<string, string> = { beginner: '입문', intermediate: '심화' };
+// 이 앱은 비전공자 대상이라 '심화'(전문가 수준)는 없음 — 둘 다 "모르는 정도" 축 위의 두 단계
+const AI_LEVEL_LABEL: Record<string, string> = { beginner: '완전 처음', intermediate: '입문' };
 const AI_LEVEL_NEXT: Record<string, 'beginner' | 'intermediate'> = { beginner: 'intermediate', intermediate: 'beginner' };
 
 type Badge = { emoji: string; name: string; locked?: boolean };
@@ -31,13 +40,26 @@ export default function ProfileScreen({ navigation }: Props) {
   const [dark, setDark] = React.useState(false);
   const interests = (state as any).interests as string[] | undefined;
 
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const heroRef = useRef<View>(null);
+  const statsRef = useRef<View>(null);
+  const badgesRef = useRef<View>(null);
+  const settingsRef = useRef<View>(null);
+  const targetRefs = { hero: heroRef, stats: statsRef, badges: badgesRef, settings: settingsRef };
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+          onScroll={e => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
+        >
           <Text style={s.h1}>Profile — 캐릭터 시트</Text>
 
           {/* Figma: 점선 테두리 히어로 카드 — 아바타 + 이름·레벨 + 성격 + XP바 */}
-          <View style={s.heroCard}>
+          <View ref={heroRef} style={s.heroCard}>
             <Image source={require('../../../assets/cat/coffee.png')} style={s.avatar} resizeMode="contain" />
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
@@ -53,7 +75,7 @@ export default function ProfileScreen({ navigation }: Props) {
           </View>
 
           {/* Figma: 점선 테두리 스탯 4칸 */}
-          <View style={s.statGrid}>
+          <View ref={statsRef} style={s.statGrid}>
             <View style={s.statBox}>
               <Text style={s.statBig}>{state.papersDone}편</Text>
               <Text style={s.statLabel}>완독 논문</Text>
@@ -73,6 +95,7 @@ export default function ProfileScreen({ navigation }: Props) {
           </View>
 
           {/* Figma: 배지 슬롯 원형 6개(4 획득 + 2 잠김) */}
+          <View ref={badgesRef}>
           <Text style={s.slotLabel}>배지 슬롯</Text>
           <View style={s.slotRow}>
             {BADGES.map((b, i) => (
@@ -86,12 +109,21 @@ export default function ProfileScreen({ navigation }: Props) {
               <Text key={i} style={s.slotName}>{b.name}</Text>
             ))}
           </View>
+          </View>
 
           {/* 설정 — Figma 미포함, 실제 앱 기능이라 유지 */}
+          <View ref={settingsRef}>
           <SectionTitle title="설정" rule />
           <View style={{ marginBottom: 18 }}>
             <Setting ic="bell"   label="학습 알림"  sub="매일 오후 8시"        right={<Switch value={alarm} onValueChange={setAlarm} trackColor={{ true: colors.accent, false: colors.hairline }} />} />
             <Setting ic="moon"   label="다크 모드"  sub="눈이 편안해요"        right={<Switch value={dark}  onValueChange={setDark}  trackColor={{ true: colors.accent, false: colors.hairline }} />} divider />
+            <Setting
+              ic="film"
+              label="온보딩 영상"
+              sub="앱 켤 때 스플래시 영상 재생"
+              right={<Switch value={state.showOnboardingVideo} onValueChange={v => set({ showOnboardingVideo: v })} trackColor={{ true: colors.accent, false: colors.hairline }} />}
+              divider
+            />
             <Setting ic="target" label="주간 목표"  sub="스트릭 커밋 설정"     right={<Text style={s.settingVal}>{state.weeklyGoalLabel || '꾸준히'}</Text>} divider />
             <Setting ic="tag"    label="관심 분야"  sub="탐색 추천에 반영돼요"  right={<Text style={s.settingVal}>{interests?.slice(0, 2).join(' · ') || 'NLP · CV'}</Text>} divider />
             <Setting
@@ -100,12 +132,13 @@ export default function ProfileScreen({ navigation }: Props) {
               sub="논문 설명 난이도에 반영돼요 — 탭해서 전환"
               right={
                 <Pressable onPress={() => set({ aiLevel: AI_LEVEL_NEXT[state.aiLevel] })}>
-                  <Text style={s.settingVal}>{AI_LEVEL_LABEL[state.aiLevel] || '입문'}</Text>
+                  <Text style={s.settingVal}>{AI_LEVEL_LABEL[state.aiLevel] || '완전 처음'}</Text>
                 </Pressable>
               }
               divider
             />
             <Setting ic="info"   label="앱 정보"    sub="버전 1.0.0"           right={<Feather name="chevron-right" size={18} color={colors.faint} />} divider />
+          </View>
           </View>
 
           <Pressable
@@ -118,6 +151,16 @@ export default function ProfileScreen({ navigation }: Props) {
             <Text style={s.logoutText}>데이터 초기화</Text>
           </Pressable>
         </ScrollView>
+
+      {!state.hasSeenProfileTour && (
+        <SpotlightTour
+          steps={TOUR_STEPS}
+          targetRefs={targetRefs}
+          scrollRef={scrollRef}
+          scrollY={scrollY}
+          onDone={() => set({ hasSeenProfileTour: true })}
+        />
+      )}
       {state.isGuest && <GuestLockOverlay navigation={navigation} />}
     </SafeAreaView>
   );

@@ -19,7 +19,7 @@ const BADGE_BY_PAPER: Record<string, any> = {
   resnet:    require('../../../assets/badges/badge-gold-3.png'),
 };
 
-// 입문(beginner)이 이 편수를 완독하면 심화로 넘어갈지 제안 — Profile의 aiLevel 토글 참고
+// 완전 처음(beginner)이 이 편수를 완독하면 입문(intermediate)으로 넘어갈지 제안 — Profile의 aiLevel 토글 참고
 const AI_LEVEL_UPGRADE_AT = 5;
 
 // Confetti pieces: keep colors close to the editorial palette
@@ -210,7 +210,7 @@ export default function LearningCompleteScreen({ navigation, route }: Props) {
           <View style={s.levelUpBox}>
             <Feather name="trending-up" size={40} color={colors.accent} />
             <Text style={s.levelUpTitle}>{AI_LEVEL_UPGRADE_AT}편 완독!</Text>
-            <Text style={s.levelUpSub}>이제 심화로 넘어가볼래냥?</Text>
+            <Text style={s.levelUpSub}>이제 입문 단계로 올라가볼래냥?</Text>
             <Pressable style={s.upgradeAccept} onPress={() => { set({ aiLevel: 'intermediate' }); setShowUpgradeSuggest(false); }}>
               <Text style={s.upgradeAcceptText}>다음 단계로</Text>
             </Pressable>

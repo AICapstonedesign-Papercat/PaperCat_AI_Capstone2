@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors } from '../../theme/tokens';
-import { Card, ProgressBar, SectionTitle, GuestLockOverlay } from '../../components';
+import { Card, ProgressBar, SectionTitle, GuestLockOverlay, SpotlightTour, type TourStep } from '../../components';
 import { useStore } from '../../store';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
 type Props = NativeStackScreenProps<ParamListBase>;
+
+const TOUR_STEPS: TourStep[] = [
+  { target: 'tabs', title: '진행 중 · 완료 · 통계', desc: '탭으로 학습 기록을 나눠 볼 수 있어요.' },
+  { target: 'chart', title: '이번 주 학습 그래프', desc: '막대·선형·히트맵 3가지 방식으로 학습 시간을 볼 수 있어요. 버튼을 눌러 그래프 종류를 바꿔보세요.' },
+  { target: 'continue', title: '이어서 학습하기', desc: '읽다 만 논문이 진행률과 함께 여기 남아있어요. 탭하면 그 지점부터 이어서 볼 수 있어요.' },
+  { target: 'activity', title: '최근 활동', desc: '최근 완독·요약·질문 기록과 받은 XP를 시간순으로 볼 수 있어요.' },
+  { target: 'rail', title: '왼쪽 메뉴', desc: '홈 · 탐색 · 도감 · 프로필로 여기서 이동해요.' },
+];
 
 type Day = { d: string; mins: number; level: number; today?: boolean };
 
@@ -254,11 +262,24 @@ function WeeklyLineChart() {
 export default function StudyScreen({ navigation }: Props) {
   const [tab, setTab] = useState('now');
   const [chartType, setChartType] = useState<ChartType>('line');
-  const [state] = useStore();
+  const [state, set] = useStore();
+
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const tabsRef = useRef<View>(null);
+  const chartRef = useRef<View>(null);
+  const continueRef = useRef<View>(null);
+  const activityRef = useRef<View>(null);
+  const targetRefs = { tabs: tabsRef, chart: chartRef, continue: continueRef, activity: activityRef };
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        onScroll={e => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
+      >
         <View style={s.head}>
           <Text style={s.h1}>학습</Text>
           <View style={s.streak}>
@@ -268,7 +289,7 @@ export default function StudyScreen({ navigation }: Props) {
         </View>
 
         {/* Tab bar — underline style matching CollectionScreen */}
-        <View style={s.tabsWrap}>
+        <View ref={tabsRef} style={s.tabsWrap}>
           <View style={{ flexDirection: 'row', gap: 22 }}>
             {['now', 'done', 'stats'].map(t => (
               <Pressable key={t} onPress={() => setTab(t)} style={[s.tab, tab === t && s.tabOn]}>
@@ -281,6 +302,7 @@ export default function StudyScreen({ navigation }: Props) {
         </View>
 
         {/* Heatmap + Line Chart */}
+        <View ref={chartRef}>
         <Card style={{ marginBottom: 22 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
             <Text style={s.chartLabel}>이번 주 학습</Text>
@@ -307,7 +329,9 @@ export default function StudyScreen({ navigation }: Props) {
           {chartType === 'line' && <WeeklyLineChart />}
           {chartType === 'heatmap' && <MonthlyHeatmap />}
         </Card>
+        </View>
 
+        <View ref={continueRef}>
         <SectionTitle title="이어서 학습하기" />
 
         <Pressable onPress={() => navigation.navigate('StageMap', { paperId: 'bert' })}>
@@ -349,7 +373,9 @@ export default function StudyScreen({ navigation }: Props) {
             </View>
           </View>
         </Pressable>
+        </View>
 
+        <View ref={activityRef}>
         <SectionTitle title="최근 활동" />
         <View style={{ marginBottom: 22 }}>
           {[
@@ -368,7 +394,18 @@ export default function StudyScreen({ navigation }: Props) {
             </View>
           ))}
         </View>
+        </View>
       </ScrollView>
+
+      {!state.hasSeenStudyTour && (
+        <SpotlightTour
+          steps={TOUR_STEPS}
+          targetRefs={targetRefs}
+          scrollRef={scrollRef}
+          scrollY={scrollY}
+          onDone={() => set({ hasSeenStudyTour: true })}
+        />
+      )}
       {state.isGuest && <GuestLockOverlay navigation={navigation} />}
     </SafeAreaView>
   );

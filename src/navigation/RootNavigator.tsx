@@ -5,6 +5,7 @@ import { colors } from '../theme/tokens';
 import { loadStore } from '../store';
 
 import PlayFirstScreen from '../screens/onboarding/PlayFirstScreen';
+import AuthScreen from '../screens/onboarding/AuthScreen';
 import CatAdoptionScreen from '../screens/onboarding/CatAdoptionScreen';
 import InterestPickerScreen from '../screens/onboarding/InterestPickerScreen';
 import StreakCommitScreen from '../screens/onboarding/StreakCommitScreen';
@@ -38,6 +39,7 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
       <Stack.Screen name="PlayFirst" component={PlayFirstScreen} />
+      <Stack.Screen name="Auth" component={AuthScreen} />
       <Stack.Screen name="CatAdoption" component={CatAdoptionScreen} />
       <Stack.Screen name="InterestPicker" component={InterestPickerScreen} />
       <Stack.Screen name="StreakCommit" component={StreakCommitScreen} />

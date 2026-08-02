@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, Image, ScrollView, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
@@ -6,13 +6,27 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../theme/tokens';
 import { useStore } from '../../store';
 import { PAPERS } from '../../data/papers';
-import { SectionTitle, GradeBadge, ProgressBar } from '../../components';
+import { SectionTitle, GradeBadge, ProgressBar, SpotlightTour, type TourStep } from '../../components';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
 const REC_PAPER_ID = 'attention';
+
+const TOUR_STEPS_MEMBER: TourStep[] = [
+  { target: 'rec', title: '오늘의 추천 논문 · 이어서 학습하기', desc: '왼쪽은 매일 바뀌는 추천 논문이에요. 오른쪽은 읽다 만 논문을 이어보는 자리 — 진행률이 그대로 남아있어요. 탭하면 바로 그 지점부터 시작해요.' },
+  { target: 'challenges', title: '오늘의 도전 과제', desc: '논문 완독하기, 한 줄 요약 쓰기 같은 작은 미션이에요. 체크박스를 누르면 완료 표시되고 XP를 받아요 — 매일 초기화돼요.' },
+  { target: 'week', title: '이번 주 학습', desc: '이번 주 학습 시간, 완료한 논문 수, 현재 레벨과 다음 레벨까지 남은 XP를 한눈에 볼 수 있어요. 밑줄은 주간 목표 대비 진행률이에요.' },
+  { target: 'badges', title: '최근 도감', desc: '다 읽은 논문은 등급별 배지가 되어 여기 쌓여요. 이 줄을 탭하면 지금까지 모은 배지를 전체 도감에서 볼 수 있어요.' },
+  { target: 'rail', title: '왼쪽 메뉴', desc: '탐색(새 논문 찾기) · 학습(진행 중인 논문) · 도감(모은 배지) · 프로필(내 통계·설정)로 여기서 바로 이동해요.' },
+];
+
+const TOUR_STEPS_GUEST: TourStep[] = [
+  { target: 'rec', title: '오늘의 추천 논문 · 이어서 학습하기', desc: '왼쪽은 매일 바뀌는 추천 논문이에요. 오른쪽은 읽다 만 논문을 이어보는 자리 — 진행률이 그대로 남아있어요.' },
+  { target: 'locked', title: '가입하면 쓸 수 있어요', desc: '한 줄 요약 채점, Q&A 챗봇, 다관점 토론은 가입 후 열려요. 지금은 체험판이라 잠겨있어요.' },
+  { target: 'rail', title: '왼쪽 메뉴', desc: '탐색(새 논문 찾기) · 학습(진행 중인 논문) · 도감(모은 배지) · 프로필로 여기서 바로 이동해요.' },
+];
 
 // Figma "Home (최종)" 확정 시안 그대로 — 마스코트+인사 한 줄, 하트만 있는 스탯,
 // 추천논문/이어서학습 2단 분할, 주간학습 스탯, 최근 도감 배지줄.
@@ -24,7 +38,7 @@ const RECENT_BADGES = [
 ];
 
 export default function HomeScreen({ navigation }: Props) {
-  const [state] = useStore();
+  const [state, set] = useStore();
   const recPaper = PAPERS.find(p => p.id === REC_PAPER_ID);
   const [challenges, setChallenges] = React.useState([
     { id: 1, text: '논문 1편 완료하기', xp: 50, done: true },
@@ -33,9 +47,23 @@ export default function HomeScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
 
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const recRef = useRef<View>(null);
+  const challengesRef = useRef<View>(null);
+  const weekRef = useRef<View>(null);
+  const badgesRef = useRef<View>(null);
+  const lockedRef = useRef<View>(null);
+  const targetRefs = { rec: recRef, challenges: challengesRef, week: weekRef, badges: badgesRef, locked: lockedRef };
+
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+          onScroll={e => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
+        >
           {/* 마스코트 + 인사 한 줄 + 하트 */}
           <View style={s.heroRow}>
             <Image source={require('../../../assets/cat/hi.png')} style={s.mascot} resizeMode="contain" />
@@ -56,7 +84,7 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
 
           {/* 오늘의 추천 논문 | 이어서 학습하기 — 2단 분할 (Figma 그대로) */}
-          <View style={[s.twoCol, isWide && s.twoColWide]}>
+          <View ref={recRef} style={[s.twoCol, isWide && s.twoColWide]}>
             <View style={[s.colLeft, isWide && s.colLeftWide]}>
               <SectionTitle title="오늘의 추천 논문" rule />
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -84,7 +112,7 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
 
           {state.isGuest && (
-            <>
+            <View ref={lockedRef}>
               <SectionTitle title="가입하면 쓸 수 있어요" />
               <View style={s.lockedRow}>
                 {[
@@ -105,11 +133,12 @@ export default function HomeScreen({ navigation }: Props) {
                   </View>
                 ))}
               </View>
-            </>
+            </View>
           )}
 
           {!state.isGuest && (
             <>
+              <View ref={challengesRef}>
               <SectionTitle title="오늘의 도전 과제" rule />
               <View style={{ marginBottom: 22 }}>
                 {challenges.map((c, i) => (
@@ -122,8 +151,10 @@ export default function HomeScreen({ navigation }: Props) {
                   </Pressable>
                 ))}
               </View>
+              </View>
 
               {/* 이번 주 학습 — 3스탯 + 진행바 */}
+              <View ref={weekRef}>
               <SectionTitle title="이번 주 학습" rule />
               <View style={s.weekStats}>
                 <View style={s.weekStat}>
@@ -142,8 +173,10 @@ export default function HomeScreen({ navigation }: Props) {
               <View style={{ marginBottom: 26 }}>
                 <ProgressBar value={state.weeklyMinutes / state.weeklyGoalMinutes} height={3} fillColor={colors.accent2} trackColor={colors.hairline} />
               </View>
+              </View>
 
               {/* 최근 도감 */}
+              <View ref={badgesRef}>
               <SectionTitle title="최근 도감" right="전체 보기 →" />
               <Pressable onPress={() => navigation.navigate('Collection')}>
                 <View style={s.badgeRow}>
@@ -155,14 +188,26 @@ export default function HomeScreen({ navigation }: Props) {
                   ))}
                 </View>
               </Pressable>
+              </View>
             </>
           )}
         </ScrollView>
+
+        {!state.hasSeenHomeTour && (
+          <SpotlightTour
+            steps={state.isGuest ? TOUR_STEPS_GUEST : TOUR_STEPS_MEMBER}
+            targetRefs={targetRefs}
+            scrollRef={scrollRef}
+            scrollY={scrollY}
+            onDone={() => set({ hasSeenHomeTour: true })}
+          />
+        )}
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
+
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 20, marginBottom: 28 },
   mascot: { width: 100, height: 130 },
   greeting: { fontSize: 30, fontFamily: 'Pretendard-ExtraBold', color: colors.ink, marginBottom: 4 },
