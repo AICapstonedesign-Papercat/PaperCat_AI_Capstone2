@@ -1,7 +1,4 @@
 # Paper Cat — iPad 앱 (React Native)
-
-**온보딩 영상 미리보기**
-
 ![온보딩 영상 미리보기](assets/video/onboarding.gif)
 
 고양이를 키우며 논문을 학습하는 게이미피케이션 모바일 앱 서비스.
