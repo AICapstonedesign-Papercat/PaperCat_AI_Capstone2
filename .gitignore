@@ -89,3 +89,4 @@ assets/ad_video/
 # (한글 파일명은 Metro 에셋 리졸버가 NFC/NFD 정규화 불일치로 못 찾아서 영문명 사용)
 assets/video/*
 !assets/video/onboarding.mp4
+!assets/video/onboarding.gif
