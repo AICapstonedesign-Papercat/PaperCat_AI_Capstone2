@@ -30,6 +30,12 @@ const DAYS: Day[] = [
   { d: '일', mins: 0,  level: 0 },
 ];
 
+// 진행률은 여기 한 곳에만 — % 표기는 progress에서 계산해서 두 값이 어긋날 일이 없게.
+const IN_PROGRESS = [
+  { paperId: 'bert', screen: 'StageMap',    cat: 'NLP', stage: 2, progress: 0.8,  title: 'BERT: Pre-training of Deep Bidirectional…' },
+  { paperId: 'vit',  screen: 'PaperDetail', cat: 'CV',  stage: 1, progress: 0.35, title: 'Vision Transformer (ViT)' },
+];
+
 const CHART_TYPES = [
   { id: 'bar',     label: '막대그래프' },
   { id: 'line',    label: '선형그래프' },
@@ -193,19 +199,17 @@ function MonthlyHeatmap() {
 function WeeklyLineChart() {
   const [chartWidth, setChartWidth] = useState(0);
   const chartHeight = 72;
-  const CHART_DAYS = DAYS.filter((d, i) => i < DAYS.findIndex(day => day.today) + 1);
+  // 오늘까지만 그림 — 앞에서부터 자르니 배열 인덱스가 곧 요일 위치
+  const CHART_DAYS = DAYS.slice(0, DAYS.findIndex(d => d.today) + 1);
   const maxVal = Math.max(...CHART_DAYS.map(d => d.mins), 1);
 
-  const points = chartWidth > 0 ? CHART_DAYS.map((d) => {
-    const idx = DAYS.findIndex(day => day.d === d.d);
-    return {
-      x: (idx / (DAYS.length - 1)) * chartWidth,
-      y: chartHeight - (d.mins / maxVal) * chartHeight,
-      mins: d.mins,
-      d: d.d,
-      today: d.today,
-    };
-  }) : [];
+  const points = chartWidth > 0 ? CHART_DAYS.map((d, idx) => ({
+    x: (idx / (DAYS.length - 1)) * chartWidth,
+    y: chartHeight - (d.mins / maxVal) * chartHeight,
+    mins: d.mins,
+    d: d.d,
+    today: d.today,
+  })) : [];
 
   return (
     <View>
@@ -334,45 +338,27 @@ export default function StudyScreen({ navigation }: Props) {
         <View ref={continueRef}>
         <SectionTitle title="이어서 학습하기" />
 
-        <Pressable onPress={() => navigation.navigate('StageMap', { paperId: 'bert' })}>
-          <View style={[s.studyRow, { marginBottom: 10 }]}>
-            <View style={s.coverWrap}>
-              <Text style={s.coverCat}>NLP</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.tagRow}>
-                <Text style={s.tagCat}>NLP</Text>
-                <Text style={s.tagDot}> · </Text>
-                <Text style={s.tagStage}>STAGE 2</Text>
-              </Text>
-              <Text style={s.itemTitle} numberOfLines={1}>BERT: Pre-training of Deep Bidirectional…</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ flex: 1 }}><ProgressBar value={0.8} height={6} fillColor={colors.accent2} trackColor={colors.hairline} /></View>
-                <Text style={s.pct}>80%</Text>
+        {IN_PROGRESS.map((p, i) => (
+          <Pressable key={p.paperId} onPress={() => navigation.navigate(p.screen, { paperId: p.paperId })}>
+            <View style={[s.studyRow, { marginBottom: i === IN_PROGRESS.length - 1 ? 22 : 10 }]}>
+              <View style={s.coverWrap}>
+                <Text style={s.coverCat}>{p.cat}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.tagRow}>
+                  <Text style={s.tagCat}>{p.cat}</Text>
+                  <Text style={s.tagDot}> · </Text>
+                  <Text style={s.tagStage}>STAGE {p.stage}</Text>
+                </Text>
+                <Text style={s.itemTitle} numberOfLines={1}>{p.title}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ flex: 1 }}><ProgressBar value={p.progress} height={6} fillColor={colors.accent2} trackColor={colors.hairline} /></View>
+                  <Text style={s.pct}>{Math.round(p.progress * 100)}%</Text>
+                </View>
               </View>
             </View>
-          </View>
-        </Pressable>
-
-        <Pressable onPress={() => navigation.navigate('PaperDetail', { paperId: 'vit' })}>
-          <View style={[s.studyRow, { marginBottom: 22 }]}>
-            <View style={s.coverWrap}>
-              <Text style={s.coverCat}>CV</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.tagRow}>
-                <Text style={s.tagCat}>CV</Text>
-                <Text style={s.tagDot}> · </Text>
-                <Text style={s.tagStage}>STAGE 1</Text>
-              </Text>
-              <Text style={s.itemTitle} numberOfLines={1}>Vision Transformer (ViT)</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ flex: 1 }}><ProgressBar value={0.35} height={6} fillColor={colors.accent2} trackColor={colors.hairline} /></View>
-                <Text style={s.pct}>35%</Text>
-              </View>
-            </View>
-          </View>
-        </Pressable>
+          </Pressable>
+        ))}
         </View>
 
         <View ref={activityRef}>

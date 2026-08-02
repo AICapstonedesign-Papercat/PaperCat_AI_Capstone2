@@ -29,10 +29,6 @@ export function CatBubble({ pose = 'wave', children, size = 64 }: { pose?: CatPo
   );
 }
 
-export function Chip({ children, style, accent }: { children: React.ReactNode; style?: any; accent?: boolean }) {
-  return <Text style={[chipStyles.text, accent && { color: colors.accent }, style]}>{children}</Text>;
-}
-
 export function GradeBadge({ grade, suffix = false, style }: { grade?: string; suffix?: boolean; style?: any }) {
   if (grade === 'S') {
     return (
@@ -124,10 +120,6 @@ const cbStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   bubble: { flex: 1, paddingVertical: 2 },
   text: { fontSize: 16, fontFamily: 'Pretendard-SemiBold', color: colors.ink, lineHeight: 23 },
-});
-
-const chipStyles = StyleSheet.create({
-  text: { fontSize: 12, fontFamily: 'SUIT-Medium', letterSpacing: 0.4, alignSelf: 'flex-start' },
 });
 
 const section = StyleSheet.create({
