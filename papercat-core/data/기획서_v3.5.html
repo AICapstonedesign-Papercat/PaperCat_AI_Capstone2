@@ -211,7 +211,7 @@
 <div class="wrap">
 
 <header>
-  <p class="eyebrow">PaperCat · 캡스톤2 기획서 v3.4 전체 요약 · iPad 앱 전환판 · 라이선스 규칙 실측 개정</p>
+  <p class="eyebrow">PaperCat · 캡스톤2 기획서 v3.5 전체 요약 · iPad 앱 전환판 · 백엔드 Supabase 확정</p>
   <h1>기획서 전체를 한 페이지로</h1>
   <p>먼저 아래 5줄만 읽으면 전체가 이해됩니다. 그 아래는 궁금할 때만 펼쳐보는 상세 자료예요.</p>
 
@@ -331,7 +331,7 @@
     <h4>(2) 논문 실데이터 연동 · 원문 수집 파이프라인</h4>
     <p>처음부터 20편이 아니라 <b>기준 논문 3편</b>으로 수집→RAG→채점→도감 수직 슬라이스를 먼저 완성.</p>
     <div class="gate-box">
-      <b>확장 게이트</b>: 3편 전 과정 동작 + Atlas 사용량 512MB의 70% 미만일 때만 20편까지 확장. 70%는 팀 운영 기준(외부 한도 아님), 실측 오차 버퍼.
+      <b>확장 게이트</b>: 3편 전 과정 동작 + DB 사용량이 무료 티어 한도의 70% 미만일 때만 20편까지 확장. 70%는 팀 운영 기준(외부 한도 아님), 실측 오차 버퍼. <b>기준 DB가 Atlas M0(512MB)에서 Supabase 무료 티어로 바뀌었으므로 S1에서 실측 재확인 필요</b>(§6).
       <br><br><b>사전 추정(역산)</b>: 임베딩 1536차원(≈6KB/벡터), 논문당 40~60문단 청킹 시 벡터+인덱스 오버헤드 포함 논문당 약 0.6~1MB. <b>3편 ≈2~3MB, 20편 확장해도 ≈12~20MB</b>로 70% 임계(≈358MB) 대비 여유 큼 — 근사치이며 S1 실측으로 확정 필요.
     </div>
     <p>지원 섹션은 Abstract·Introduction·Method 우선. 수식·표·그림 질의는 초기 버전 범위 밖.</p>
@@ -459,7 +459,7 @@
         <div class="title">품질 검증</div>
         <div class="body">평가셋·골든셋은 P1과 병렬 구축, <b>P1 통과 후</b> 실제 결과 측정·개선(골든셋 회귀·RAGAS·실패UX)</div>
       </div>
-      <div class="gate"><div class="arrow-ic">→</div><div class="cond">P1 3편 전 과정 성공 +<br>Atlas 70%미만(실측) +<br>논문당 비용·처리시간 기준 충족</div></div>
+      <div class="gate"><div class="arrow-ic">→</div><div class="cond">P1 3편 전 과정 성공 +<br>DB 70%미만(실측) +<br>논문당 비용·처리시간 기준 충족</div></div>
       <div class="step">
         <span class="tag">P3</span>
         <div class="title">콘텐츠 확장</div>
@@ -534,10 +534,10 @@
     <span class="sys-arrow">→</span>
     <div class="sys-node center">React Native 앱<br>(Expo 제외)</div>
     <span class="sys-arrow">→</span>
-    <div class="sys-node center">백엔드 API<br>(구조 미확정, 담당 김성민)</div>
+    <div class="sys-node center">Supabase<br>Auth · Edge Functions<br>(담당 김성민)</div>
     <span class="sys-arrow">→</span>
     <div class="sys-col">
-      <div class="sys-node">MongoDB Atlas<br>+ Vector Search</div>
+      <div class="sys-node">Supabase Postgres<br>+ pgvector</div>
       <div class="sys-node">생성: Claude/GPT/Gemini<br>임베딩: OpenAI/Gemini<br>(Claude 임베딩 미제공)</div>
       <div class="sys-node">arXiv·Semantic<br>Scholar</div>
     </div>
@@ -576,27 +576,46 @@
 </section>
 
 <section id="s5">
-  <h2><span class="num">6</span> 백엔드 구조 — 후보 (미확정, 담당 김성민)</h2>
-  <p class="plain">한 줄 요약: <b>프론트가 앱(RN)으로 바뀌면서 "프론트·백 통합" 후보는 소멸</b> — 이제 백엔드는 무조건 별도 API 서버. 세부 구조(후보 A vs B')는 김성민이 S1 1주차 첫날 ADR로 확정.</p>
+  <h2><span class="num">6</span> 백엔드 구조 — Supabase (확정, 담당 김성민)</h2>
+  <p class="plain">한 줄 요약: <b>2026-08-02 Supabase로 확정</b> — 후보 A(별도 Node)·B'(Vercel 서버리스)는 소멸. Auth·Postgres·Edge Functions를 한 곳에서 받고, <b>MongoDB Atlas + Vector Search도 Postgres + pgvector로 대체</b>(같은 DB에서 벡터 검색이 되므로 별도 DB를 붙일 이유가 없어짐).</p>
   <details class="section-toggle">
     <summary></summary>
     <div class="inner">
       <div class="wrap-table">
         <table>
-          <tr><th>항목</th><th>후보 A: 별도 Node.js 서버</th><th>후보 B': Vercel 서버리스(API 전용)</th></tr>
-          <tr><td>구성</td><td>Express/Fastify 등 상시 서버</td><td>Route Handlers를 API 전용으로만 사용(프론트 없음)</td></tr>
-          <tr><td>장점</td><td>실행시간 제약 없음, 1차 설계 재사용, 책임 경계 명확</td><td>배포 자동화 활용, 별도 서버 운영 부담 없음</td></tr>
-          <tr><td>단점</td><td>별도 호스팅 필요(Railway/Render 등)</td><td>서버리스 함수 실행시간 제한(Fluid Compute 켜면 300초, 끄면 60초)</td></tr>
+          <tr><th>구성 요소</th><th>역할</th><th>현재 상태</th></tr>
+          <tr><td>Supabase Auth</td><td>이메일 회원가입·로그인, 세션 유지</td><td><span class="tag mvp">완료</span> 앱 6개 화면 연결, 끝에서 끝까지 동작</td></tr>
+          <tr><td>Postgres</td><td><span class="mono">profiles</span>(레벨·XP·스트릭) · <span class="mono">paper_progress</span> · <span class="mono">summary_challenges</span></td><td><span class="tag exp">부분</span> 테이블 생성됨. 마이그레이션 파일이 없어 스키마가 대시보드에만 존재 — 팀원 재현·리뷰 불가</td></tr>
+          <tr><td>pgvector</td><td>문단 임베딩 저장 + 벡터 검색(구 Atlas Vector Search 역할)</td><td><span class="tag same">미착수</span></td></tr>
+          <tr><td>Edge Functions (Deno)</td><td>LLM 호출·RAG 파이프라인·가드레일 실행</td><td><span class="tag exp">부분</span> <span class="mono">papercat-ai</span> 배포됨(프롬프트→Gemini→텍스트). 아직 앱에서 호출 안 함</td></tr>
         </table>
       </div>
-      <p class="sec-desc">긴 생성 작업(스토리텔링 등)은 서버 형태 무관하게 상태 DB 저장·재시도·중복 방지·완료 알림 공통 설계. MVP는 서버리스 함수 실행 한도 이내 동기 실행, 재시도는 앱의 재요청 버튼 트리거. RN 앱은 네이티브 HTTP 클라이언트라 CORS 제약이 없어 웹보다 통신 설정이 단순.</p>
+
+      <div class="risk">
+        <b>남은 일의 대부분은 RAG 레이어</b> — 현재 Edge Function은 검색 없이 프롬프트를 그대로 모델에 넘기는 구조라, 논문 원문을 읽지 않고 배경지식으로 답한다. 이 상태에서는 <b>§1 차별점 3개(근거 우선 사용 · 근거 ID 연결 · 근거 없으면 거절)가 모두 성립하지 않는다</b>. 검색→근거 첨부→인용 검증→거절 판정을 서버에 올리는 것이 S1의 핵심 작업이며, 논리 자체는 <span class="mono">papercat-core</span>에서 논문 3편으로 이미 실측·검증돼 있다(§4).
+      </div>
+
+      <div class="note">
+        <b>플랫폼 전환으로 달라진 것</b>
+        <ul style="margin:.5rem 0 0; padding-left:1.2rem;">
+          <li><b>DB 이중화 제거</b> — Atlas(벡터) + 별도 DB(사용자 데이터) 구성이 Postgres 하나로 합쳐짐. Atlas M0의 512MB 게이트 대신 Supabase 무료 티어 기준으로 재산정하되, 3편 ≈2.1MB / 20편 ≈14MB이라 여유는 그대로 큼</li>
+          <li><b>인증이 범위에 들어옴</b> — 기존 계획엔 "게스트ID"만 있었으나 실제 회원가입이 구현됨. 게스트 체험은 Supabase 익명 로그인으로 유지 가능</li>
+          <li><b>실행시간 제약은 남음</b> — Edge Function도 실행 한도가 있어, 긴 생성 작업(스토리텔링)의 상태 DB 저장·재시도·중복 방지 공통 설계는 후보 B'와 동일하게 필요. MVP는 한도 이내 동기 실행, 재시도는 앱의 재요청 버튼 트리거</li>
+        </ul>
+      </div>
+
+      <div class="risk">
+        <b>선결 과제 — 함수 접근 제한</b>: 현재 <span class="mono">verify_jwt = false</span>이고 클라이언트가 프롬프트 전문을 보내는 구조라, 함수 URL을 아는 사람은 인증 없이 우리 API 키로 임의 프롬프트를 실행할 수 있다. §2(6) "비용 남용 방어 — API키 서버 전용, 요청/일별 한도"에 해당하며, RAG 담당과 무관하게 먼저 처리해야 한다. 동시에 프롬프트 조립을 서버로 옮겨야 시스템 프롬프트 우회(인젝션)도 막힌다 — 클라이언트는 <span class="mono">{paperId, question}</span> 같은 구조화된 값만 전송.
+      </div>
+
+      <p class="sec-desc">앱↔서버가 주고받을 JSON의 모양과 필드 의미는 별도 문서로 고정했다 — <span class="mono">papercat-core/API_CONTRACT.md</span>. 엔드포인트 이름·URL 구조는 자유이나 응답 필드의 의미(<span class="mono">status: answered|refused</span>, <span class="mono">claims[].type</span>, 인용 ID 포맷 등)는 §4 실측·적대검증으로 확정된 것이라 유지해야 한다. RN 앱은 네이티브 HTTP 클라이언트라 CORS 제약이 없어 통신 설정은 단순.</p>
     </div>
   </details>
 </section>
 
 <section id="s6">
   <h2><span class="num">7</span> 개발 환경</h2>
-  <p class="plain">한 줄 요약: <b>React Native(bare, Expo 제외) + MongoDB Atlas + 생성 API(Claude/GPT/Gemini) + 임베딩 API(OpenAI/Gemini), 배포는 TestFlight</b>. Expo는 팀 결정으로 제외 — 방어 근거 없음을 인지한 선택. 개발 중엔 무료 티어(Gemini), 배포 시 종량제로 전환.</p>
+  <p class="plain">한 줄 요약: <b>React Native(bare, Expo 제외) + Supabase(Auth·Postgres·pgvector·Edge Functions) + 생성 API(Claude/GPT/Gemini) + 임베딩 API(OpenAI/Gemini), 배포는 TestFlight</b>. Expo는 팀 결정으로 제외 — 방어 근거 없음을 인지한 선택. 개발 중엔 무료 티어(Gemini), 배포 시 종량제로 전환.</p>
   <details class="section-toggle">
     <summary></summary>
     <div class="inner">
@@ -609,8 +628,8 @@
           <tr><td>네이티브 빌드</td><td>Xcode, CocoaPods — 팀 전원 Mac 필요(S1 전 확인)</td></tr>
           <tr><td>배포 계정</td><td>Apple Developer Program(연 $99)</td></tr>
           <tr><td>배포 경로</td><td>TestFlight(베타) → 필요 시 App Store</td></tr>
-          <tr><td>백엔드</td><td>미확정 — S1 1주차 김성민 확정</td></tr>
-          <tr><td>DB</td><td>MongoDB Atlas + Vector Search (M0, 512MB)</td></tr>
+          <tr><td>백엔드</td><td><b>Supabase</b> — Auth · Postgres · Edge Functions(Deno). 담당 김성민 (2026-08-02 확정)</td></tr>
+          <tr><td>DB · 벡터검색</td><td><b>Supabase Postgres + pgvector</b> — 사용자 데이터와 문단 임베딩을 한 DB에서. 구 MongoDB Atlas + Vector Search 대체</td></tr>
           <tr><td>AI</td><td>생성: Claude/GPT/Gemini API · 임베딩: OpenAI 또는 Gemini(Claude 미제공) · RAG, LLM-as-judge, RAGAS. 개발 단계는 무료 티어, 배포는 종량제</td></tr>
           <tr><td>외부 API</td><td>arXiv, Semantic Scholar(개인키 초기 1 RPS)</td></tr>
           <tr><td>협업 도구</td><td>Notion, GitHub, Discord, Figma</td></tr>
@@ -658,7 +677,7 @@
       <div class="wrap-table">
         <table>
           <tr><th>스프린트</th><th>내용</th><th>산출물</th><th>중단 조건</th></tr>
-          <tr><td>S1</td><td>백엔드 확정(김성민)·구축, RN 빌드 파이프라인 + 2주차 내 빈 앱 TestFlight 등록(부트스트랩 검증), 3편 수직 슬라이스, Atlas 실측</td><td>iPad 앱 기본 화면·검색, 저장용량 실측치, TestFlight 등록</td><td>3편 파싱 안 되면 → Abstract-only 중심 재조정. TestFlight 지연 시 → 데모는 시뮬레이터+실기기 직접 설치로 대체</td></tr>
+          <tr><td>S1</td><td>Supabase 구축(김성민) — pgvector 인제스트·RAG 파이프라인·함수 접근 제한, RN 빌드 파이프라인 + 2주차 내 빈 앱 TestFlight 등록(부트스트랩 검증), 3편 수직 슬라이스, DB 용량 실측</td><td>iPad 앱 기본 화면·검색, 저장용량 실측치, TestFlight 등록</td><td>3편 파싱 안 되면 → Abstract-only 중심 재조정. TestFlight 지연 시 → 데모는 시뮬레이터+실기기 직접 설치로 대체</td></tr>
           <tr><td>S2</td><td>RAG 파이프라인 + 가드레일 최소버전, 랜딩 통합</td><td>MVP 완성</td><td>품질 시연 불가 → 지원논문 축소·프롬프트 개선</td></tr>
           <tr><td>S3</td><td>평가셋 구축, 골든셋·인용검증·RAGAS, 수준별 학습</td><td>평가 리포트 초판</td><td>품질 게이트 미달 → P4 고도화 보류</td></tr>
           <tr><td>S4</td><td>사용자 테스트, (여유시) 멀티에이전트·방법론시각화, 배포·발표</td><td>배포 URL, 결과보고서</td><td>—</td></tr>
@@ -673,7 +692,8 @@
   <p class="sec-desc">NotebookLM 검토(v3.2.5)와 적대검증(v3.2.6, v3.3)에서 지적된 지점을 순서대로 메웠습니다.</p>
   <div class="diff-grid">
     <div class="diff-card"><div class="k">보완 1</div><p>MVP(P1) 자체에 <b>정량 통과선</b> 추가 — 이전엔 "동작하면 통과"뿐</p></div>
-    <div class="diff-card"><div class="k">보완 2</div><p>Atlas 512MB 게이트에 <b>사전 역산</b> 추가 — "70%"가 왜 타당한지 숫자로 뒷받침</p></div>
+    <div class="diff-card"><div class="k">보완 2</div><p>Atlas 512MB 게이트에 <b>사전 역산</b> 추가 — "70%"가 왜 타당한지 숫자로 뒷받침 <i>(당시 기록. DB는 v3.5에서 Supabase로 교체됨)</i></p></div>
+    <div class="diff-card"><div class="k">보완 10 (v3.5)</div><p><b>백엔드 스택 확정 — Supabase</b>. 후보 A(별도 Node)·B'(Vercel 서버리스) 중 고르는 대신 Auth·Postgres·Edge Functions를 한 곳에서 받는 구성으로 결정됐고, 인증(이메일 가입·로그인)은 이미 동작한다. <b>MongoDB Atlas + Vector Search도 Postgres + pgvector로 흡수</b>돼 DB 이중화가 사라졌다(§6·§7·§5 다이어그램·§11 검색 항목 반영). 다만 현 서버는 검색 없이 프롬프트를 모델에 그대로 넘기는 구조라 <b>RAG 레이어가 통째로 미착수</b>이며, §1 차별점 3개가 여기에 걸려 있다 — S1의 핵심 작업으로 명시. 앱↔서버 필드 의미는 <span class="mono">API_CONTRACT.md</span>로 분리 고정</p></div>
     <div class="diff-card"><div class="k">보완 3</div><p><b>침묵 실패 모니터링</b> 신설 — 정상처럼 보이지만 근거가 안 맞는 응답을 배포 후에도 포착</p></div>
     <div class="diff-card"><div class="k">보완 4 (v3.3)</div><p><b>플랫폼 전환(웹→iPad 앱)</b> 6회 적대검증 — "왜 iPad"는 가설로 강등, "왜 앱"은 캡디1 계승으로 답 확보, Expo 제외·9주차 회귀불가 시점 등 방어조항 5개 확정</p></div>
     <div class="diff-card"><div class="k">보완 5 (v3.4)</div><p><b>라이선스 규칙 실측 개정</b> — arXiv OAI-PMH로 대표 논문 18편 조회 결과 CC BY는 1편뿐. "CC BY만 적격"은 실행 불가로 판명돼 <b>제한을 논문이 아닌 표시 방식에 거는 규칙</b>으로 교체하고, 라이선스 자동판정을 인제스트에 내장. 확장분은 CC BY 4.0인 ACL Anthology 우선</p></div>
@@ -690,7 +710,7 @@
   <div class="wrap-table">
     <table>
       <tr><th>영역</th><th>현재→목표</th><th>구현 방법</th><th>투입 시점</th></tr>
-      <tr><td>검색(Retrieval)</td><td>50→<b>85%</b></td><td>Atlas 하이브리드 검색($rankFusion, 벡터+키워드 결합) + Cohere Rerank 리랭커로 후보 재정렬</td><td>S2 (RAG 파이프라인 구축과 동시)</td></tr>
+      <tr><td>검색(Retrieval)</td><td>50→<b>85%</b></td><td>Postgres 하이브리드 검색(pgvector 벡터 + <span class="mono">tsvector</span> 키워드를 RRF로 결합) + Cohere Rerank 리랭커로 후보 재정렬. <b>구 계획의 Atlas <span class="mono">$rankFusion</span>을 대체</b> — 스택이 Supabase로 바뀌며 SQL 한 쿼리로 처리 가능해짐</td><td>S2 (RAG 파이프라인 구축과 동시)</td></tr>
       <tr><td>평가 자동화</td><td>40→<b>85%</b></td><td>골든셋·평가셋 비교를 스크립트화 → GitHub Actions에 연결, push마다 자동 평가·기준 미달 시 머지 차단(CI 게이트)</td><td>S2~S3 (평가셋 구축과 병렬)</td></tr>
       <tr><td>청킹 파이프라인</td><td>35→<b>75%</b></td><td><b>실측으로 계획 수정</b> — 3전략(문단단위/병합/병합+오버랩)을 같은 골든셋으로 비교한 결과 <b>오버랩은 오히려 손해</b>였다(병합 100% vs 병합+오버랩 93.3%). 계획의 "오버랩 기본 적용"은 철회하고 <b>병합(섹션 내 인접 문단을 700자 목표로 묶기)을 기본</b>으로 채택. 시맨틱 청킹 비교는 확장 단계로 이월</td><td><span class="tag mvp">실측 완료</span></td></tr>
       <tr><td>보안</td><td>40→<b>70%</b></td><td><b>계획 수정 — 공개 데이터셋 대신 자체 케이스 28개.</b> 범용 인젝션 데이터셋은 "도구 실행·권한 탈취"를 노리는데 이 시스템은 도구 실행권한이 없어 대부분 자동 통과한다(점수만 부풀림). 실제 공격면 3개(질문 입력 / 논문 원문 / 요약 입력)에 맞춰 다시 썼고, 방어를 <b>3종으로 분리</b>: 구조적 9건(코드가 보장, 오프라인 검증 완료) · 행동적 16건(LLM 준수 필요, 실측 대기) · 운영적 3건(rate limit 등 백엔드 몫). 합산 통과율은 내지 않는다 — 구조적 9건이 행동적 점수를 부풀리기 때문</td><td><span class="tag mvp">케이스·구조방어 완료</span> 실측 S3</td></tr>
@@ -726,8 +746,9 @@
   <details class="gloss-toggle">
     <summary>데이터·인프라 (8개)</summary>
     <div class="gloss-grid">
-      <div class="gloss"><dt>MongoDB Atlas</dt><dd>클라우드 관리형 MongoDB 서비스.</dd></div>
-      <div class="gloss"><dt>M0 (무료 티어)</dt><dd>Atlas 완전 무료 요금제, 저장 512MB 제한.</dd></div>
+      <div class="gloss"><dt>Supabase</dt><dd>인증·Postgres DB·서버리스 함수를 한 곳에서 주는 백엔드 서비스. 이 프로젝트의 백엔드 스택.</dd></div>
+      <div class="gloss"><dt>pgvector</dt><dd>Postgres에서 벡터를 저장하고 유사도 검색을 하게 해주는 확장. 별도 벡터 DB 없이 같은 DB에서 RAG 검색이 된다.</dd></div>
+      <div class="gloss"><dt>Edge Function</dt><dd>Supabase의 서버리스 함수(Deno 런타임). API 키를 서버 쪽에 숨긴 채 LLM을 호출하는 자리.</dd></div>
       <div class="gloss"><dt>arXiv</dt><dd>논문을 무료 공개하는 사이트. 원문 주 출처.</dd></div>
       <div class="gloss"><dt>Semantic Scholar</dt><dd>논문 메타데이터 검색 무료 API.</dd></div>
       <div class="gloss"><dt>CC BY 라이선스</dt><dd>출처표시·변경고지 조건으로 변형·재배포 허용하는 오픈 라이선스.</dd></div>
@@ -773,7 +794,7 @@
   </details>
 </section>
 
-<footer>PaperCat 기획서 v3.4 전체 요약(iPad 앱 전환 · 라이선스 규칙 실측 개정) · 팀 공유용 · 세부 근거는 원본 기획서·v3.3 적대검증 문서 참고</footer>
+<footer>PaperCat 기획서 v3.5 전체 요약(iPad 앱 전환 · 라이선스 규칙 실측 개정 · 백엔드 Supabase 확정) · 팀 공유용 · API 필드 계약은 papercat-core/API_CONTRACT.md 참고</footer>
 
 </div>
 
