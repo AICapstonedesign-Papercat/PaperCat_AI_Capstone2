@@ -174,7 +174,7 @@ export default function AuthScreen({ navigation }: Props) {
     } else {
       // ponytail: .env 채워지기 전 화면 흐름만 테스트하는 임시 통과 — 실제 인증 아님.
       // 이메일/비번 아무거나 입력하면 그대로 통과됨. SUPABASE_CONFIGURED가 true가 되는 순간 이 분기는 안 탐.
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise<void>(resolve => setTimeout(() => resolve(), 400));
       setLoading(false);
     }
     if (mode === 'login') {

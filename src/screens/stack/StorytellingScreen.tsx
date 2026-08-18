@@ -1,8 +1,10 @@
-import React from 'react';
-import { View, Text, Image, ScrollView, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Image, ScrollView, Pressable, StyleSheet, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, readingWidth, centerColumn } from '../../theme/tokens';
+import { usePaper } from '../../data/papers';
+import { generateStory, toPaperContext, type StoryResult } from '../../lib/ai';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
@@ -10,9 +12,32 @@ type Props = NativeStackScreenProps<ParamListBase>;
 
 // Figma "Storytelling" 확정 시안 — 챕터 헤딩 + 큰 제목 + 원형 점선 프레임 마스코트 +
 // 드롭캡 본문 + 하단 필(pill)형 "냥이의 속삭임" 콜아웃.
-export default function StorytellingScreen({ navigation }: Props) {
+// 내용(chapter/title/story/whisper)은 generate-story Edge Function이 논문별로 생성 —
+// supabase/functions/generate-story/index.ts의 PROMPT 참고.
+export default function StorytellingScreen({ navigation, route }: Props) {
+  const paperId = (route?.params as any)?.paperId || 'attention';
+  const { paper } = usePaper(paperId);
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
+
+  const [story, setStory] = useState<StoryResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!paper) return;
+    let cancelled = false;
+    setLoading(true);
+    setFailed(false);
+    generateStory(toPaperContext(paper))
+      .then(result => { if (!cancelled) setStory(result); })
+      .catch(err => {
+        console.warn('[Storytelling] generateStory 실패:', err);
+        if (!cancelled) setFailed(true);
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [paper?.id]);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -25,37 +50,40 @@ export default function StorytellingScreen({ navigation }: Props) {
 
       <View style={centerColumn}>
         <ScrollView style={readingWidth} contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
-          <Text style={s.chapter}>1장 · 우리가 몰랐던 이야기</Text>
-
-          <View style={[s.headRow, isWide && s.headRowWide]}>
-            <Text style={[s.bigTitle, isWide && { flex: 1 }]}>Self-Attention이 세상을 바꾼 날</Text>
-            <View style={s.mascotRing}>
-              <Image source={require('../../../assets/cat/hi.png')} style={s.mascot} resizeMode="contain" />
+          {loading ? (
+            <View style={s.loadingBlock}>
+              <ActivityIndicator color={colors.accent2} />
+              <Text style={s.loadingText}>냥이가 이야기를 쓰고 있어요…</Text>
             </View>
-          </View>
+          ) : failed || !story ? (
+            <Text style={s.errorText}>이야기를 불러오지 못했어요. 뒤로 갔다가 다시 들어와봐 주세요냥.</Text>
+          ) : (
+            <>
+              <Text style={s.chapter}>{story.chapter}</Text>
 
-          <View style={s.divider} />
+              <View style={[s.headRow, isWide && s.headRowWide]}>
+                <Text style={[s.bigTitle, isWide && { flex: 1 }]}>{story.title}</Text>
+                <View style={s.mascotRing}>
+                  <Image source={require('../../../assets/cat/hi.png')} style={s.mascot} resizeMode="contain" />
+                </View>
+              </View>
 
-          <View style={s.storyBody}>
-            <Text style={s.dropCap}>본</Text>
-            <Text style={s.p}>
-              연구는 대규모 언어모델의 in-context learning 능력이 사전학습 데이터 분포에 어떻게
-              의존하는지를 실증적으로 분석한다. 저자들은 태스크 다양성과 예시 개수를 체계적으로
-              변화시키며 few-shot 성능의 변화를 관찰했고, 그 결과 데이터가 다양할수록 새로운
-              문제에 더 잘 적응한다는 사실을 발견했다.
-            </Text>
-          </View>
+              <View style={s.divider} />
 
-          <View style={s.whisper}>
-            <Image source={require('../../../assets/cat/concern.png')} style={s.whisperIcon} resizeMode="contain" />
-            <View style={{ flex: 1 }}>
-              <Text style={s.whisperLabel}>냥이의 속삭임</Text>
-              <Text style={s.whisperText}>
-                쉽게 말하면, 이 모델은 예시 몇 개만 보고도 처음 보는 문제를 풀 수 있어요 —
-                데이터가 다양할수록 더 똑똑해진대요냥.
-              </Text>
-            </View>
-          </View>
+              <View style={s.storyBody}>
+                <Text style={s.dropCap}>{story.story.slice(0, 1)}</Text>
+                <Text style={s.p}>{story.story.slice(1)}</Text>
+              </View>
+
+              <View style={s.whisper}>
+                <Image source={require('../../../assets/cat/concern.png')} style={s.whisperIcon} resizeMode="contain" />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.whisperLabel}>냥이의 속삭임</Text>
+                  <Text style={s.whisperText}>{story.whisper}</Text>
+                </View>
+              </View>
+            </>
+          )}
         </ScrollView>
       </View>
 
@@ -73,6 +101,10 @@ const s = StyleSheet.create({
   nav: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 12 },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   navTitle: { flex: 1, fontSize: 17, fontFamily: 'SUIT-Medium', fontWeight: undefined, color: colors.ink },
+
+  loadingBlock: { alignItems: 'center', paddingVertical: 60, gap: 14 },
+  loadingText: { fontSize: 13, fontFamily: 'Pretendard-Regular', color: colors.muted },
+  errorText: { fontSize: 14, fontFamily: 'Pretendard-Regular', color: colors.muted, textAlign: 'center', paddingVertical: 60 },
 
   chapter: { fontSize: 13, fontFamily: 'Pretendard-Regular', color: colors.accent2, letterSpacing: 1, marginBottom: 8 },
 

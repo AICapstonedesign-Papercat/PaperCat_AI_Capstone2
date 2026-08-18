@@ -77,6 +77,10 @@ yarn-error.log
 # oh-my-claudecode agent state
 .omc/
 
+# Supabase CLI 로컬 상태(project-ref, pooler URL, 버전 파일) — 레포에 올릴 이유 없음
+supabase/.temp/
+supabase/.branches/
+
 # Environment variables
 .env
 .env.local

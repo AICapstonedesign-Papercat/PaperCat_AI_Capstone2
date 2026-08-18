@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, KeyboardAvoidingView, Platform, StyleSheet, Image } from 'react-native';
+import { View, Text, ScrollView, TextInput, Pressable, KeyboardAvoidingView, Platform, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, readingWidth, centerColumn } from '../../theme/tokens';
 import { GuestBanner } from '../../components';
 import { useStore } from '../../store';
+import { usePaper } from '../../data/papers';
+import { askPaperQuestion, toPaperContext } from '../../lib/ai';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
@@ -14,56 +16,41 @@ type Message = { who: 'cat' | 'me'; text: string };
 
 const INITIAL: Message[] = [
   { who: 'cat', text: '안녕! 이 논문에 대해 뭐든 물어봐냥' },
-  { who: 'cat', text: '예: "Attention이 뭐야?", "RNN이랑 뭐가 달라?"' },
+  { who: 'cat', text: '예: "핵심 아이디어가 뭐야?", "어떤 문제를 풀어?"' },
 ];
 
-const SUGGESTIONS = ['Attention이 뭐야?', 'Transformer 구조는?', '병렬 처리 원리', '인코더 디코더 차이', 'RNN과 뭐가 달라?'];
+const SUGGESTIONS = ['핵심 아이디어가 뭐야?', '어떤 문제를 풀어?', '이전 방법이랑 뭐가 달라?', '왜 중요한 논문이야?', '한계점은 뭐야?'];
 
-const FAKE_REPLIES: Record<string, string> = {
-  'attention': 'Attention은 문장 안에서 어떤 단어가 어떤 단어와 관련이 있는지 그 가중치를 학습하는 메커니즘이야. 한 단어를 이해할 때 다른 모든 단어를 한 번에 보면서 "얘가 중요하구나" 가중치를 매기는 거지!',
-  'transformer': 'Transformer는 Encoder와 Decoder 두 부분으로 구성돼. Encoder가 입력 문장 전체를 한 번에 이해하고, Decoder가 그걸 바탕으로 출력을 생성해. RNN과 달리 모든 위치를 동시에 처리해서 병렬 계산이 가능해!',
-  'rnn':       'RNN은 한 글자씩 차례로 읽으면서 기억을 흘려보내는 방식이야. 길어지면 앞 정보를 잊어버려. Transformer는 모든 단어를 동시에 보니까 그런 문제가 없어!',
-  'self':      '예를 들어 "그 고양이가 잤다" 문장에서 "잤다"의 주어인 "고양이"에 강한 attention 가중치가 생기는 식이야. 단어끼리 스스로 연관관계를 파악하니까 "Self"-Attention이라고 부르는 거야!',
-  'multihead': 'Multi-Head Attention은 Attention을 여러 개 병렬로 실행하는 거야. 각 헤드가 다른 관점에서 단어 관계를 포착해. 어떤 헤드는 문법을 보고, 어떤 헤드는 의미를 보는 식이야!',
-  'parallel':  'Transformer가 혁신적인 이유 중 하나가 병렬 처리야! RNN은 순서대로 처리해야 해서 GPU를 못 쓰지만, Transformer는 모든 단어를 동시에 처리하니까 학습이 훨씬 빨라져!',
-  'positional': '단어 순서를 알려주는 장치야. Transformer는 순서를 모르니까, 각 단어에 위치 정보를 사인·코사인 함수로 인코딩해서 더해줘. "나는 밥을 먹었다"와 "밥을 나는 먹었다"를 구별할 수 있게 되는 거지!',
-  'encoder':   'Encoder는 입력 문장을 의미 벡터로 압축해. 각 단어가 문장 전체 맥락을 담은 표현으로 변환돼. N번 쌓은 Encoder 레이어를 거쳐 풍부한 문맥 표현이 만들어지는 구조야!',
-  'decoder':   'Decoder는 Encoder의 출력을 참고해서 결과를 생성해. 이미 생성된 토큰을 보면서(Masked Self-Attention) + Encoder 출력을 참고해서(Cross-Attention) 다음 토큰을 예측하는 방식이야!',
-  'default':   '좋은 질문이냥! 핵심 포인트는 "어떤 단어가 어떤 단어와 관련이 깊은지 학습한다"는 거야. 더 구체적으로 물어봐줘냥!',
-};
-
-export default function QAChatbotScreen({ navigation }: Props) {
+export default function QAChatbotScreen({ navigation, route }: Props) {
+  const paperId = (route?.params as any)?.paperId || 'attention';
+  const { paper } = usePaper(paperId);
   const [state] = useStore();
   const [showGuest, setShowGuest] = useState(state.isGuest);
   const [messages, setMessages] = useState<Message[]>(INITIAL);
   const [text, setText] = useState('');
+  const [asking, setAsking] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages]);
 
-  const send = (raw?: string) => {
+  const send = async (raw?: string) => {
     const q = (raw ?? text).trim();
-    if (!q) return;
+    if (!q || asking || !paper) return;
     const next: Message[] = [...messages, { who: 'me', text: q }];
     setMessages(next);
     setText('');
-    setTimeout(() => {
-      const lower = q.toLowerCase();
-      const reply =
-        lower.includes('transformer') || lower.includes('트랜스포머') ? FAKE_REPLIES.transformer :
-        lower.includes('multi') || lower.includes('헤드') || lower.includes('head') ? FAKE_REPLIES.multihead :
-        lower.includes('attention') || lower.includes('어텐션') ? FAKE_REPLIES.attention :
-        lower.includes('rnn') || lower.includes('lstm')         ? FAKE_REPLIES.rnn :
-        lower.includes('self') || lower.includes('셀프')        ? FAKE_REPLIES.self :
-        lower.includes('병렬') || lower.includes('parallel')    ? FAKE_REPLIES.parallel :
-        lower.includes('포지셔널') || lower.includes('위치') || lower.includes('positional') ? FAKE_REPLIES.positional :
-        lower.includes('인코더') || lower.includes('encoder')   ? FAKE_REPLIES.encoder :
-        lower.includes('디코더') || lower.includes('decoder')   ? FAKE_REPLIES.decoder :
-        FAKE_REPLIES.default;
-      setMessages([...next, { who: 'cat', text: reply }]);
-    }, 700);
+    setAsking(true);
+    try {
+      const answer = await askPaperQuestion(toPaperContext(paper), q, next);
+      setMessages([...next, { who: 'cat', text: answer }]);
+    } catch (err) {
+      console.warn('[QAChatbot] askPaperQuestion 실패:', err);
+      setMessages([...next, { who: 'cat', text: '앗, 지금 대답을 못 가져왔어냥. 잠시 후 다시 물어봐줘냥' }]);
+    } finally {
+      setAsking(false);
+    }
   };
 
   return (
@@ -96,6 +83,13 @@ export default function QAChatbotScreen({ navigation }: Props) {
             )
           ))}
 
+          {asking && (
+            <View style={s.catRow}>
+              <Image source={require('../../../assets/cat/study_with_ipad_right.png')} style={{ width: 34, height: 34, resizeMode: 'contain' }} />
+              <View style={s.catBubble}><ActivityIndicator size="small" color={colors.muted} /></View>
+            </View>
+          )}
+
           {/* Suggestions — monochrome letterspaced labels, no filled pill */}
           <View style={{ marginTop: 12 }}>
             <Text style={s.suggLabel}>이런 거 물어볼래냥?</Text>
@@ -121,8 +115,9 @@ export default function QAChatbotScreen({ navigation }: Props) {
             onChangeText={setText}
             onSubmitEditing={() => send()}
             returnKeyType="send"
+            editable={!asking}
           />
-          <Pressable onPress={() => send()} style={s.sendBtn}>
+          <Pressable onPress={() => send()} style={[s.sendBtn, asking && { opacity: 0.5 }]} disabled={asking}>
             <Feather name="send" size={18} color="#fff" />
           </Pressable>
         </View>

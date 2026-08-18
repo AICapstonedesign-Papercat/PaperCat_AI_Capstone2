@@ -5,6 +5,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { colors } from '../../theme/tokens';
 import { ProgressBar, SectionTitle, GuestLockOverlay, SpotlightTour, type TourStep } from '../../components';
 import { useStore, resetStore } from '../../store';
+import { usePapers } from '../../data/papers';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
@@ -25,20 +26,23 @@ const AI_LEVEL_NEXT: Record<string, 'beginner' | 'intermediate'> = { beginner: '
 
 type Badge = { emoji: string; name: string; locked?: boolean };
 
-const BADGES: Badge[] = [
-  { emoji: '🏆', name: '첫 골드' },
-  { emoji: '📖', name: '10편 돌파' },
-  { emoji: '🔥', name: '3일 연속' },
-  { emoji: '🤖', name: 'NLP 입문' },
-  { emoji: '👁️', name: 'CV 입문', locked: true },
-  { emoji: '🎮', name: 'RL 입문', locked: true },
-];
-
 export default function ProfileScreen({ navigation }: Props) {
   const [state, set] = useStore();
+  const { papers } = usePapers();
   const [alarm, setAlarm] = React.useState(true);
   const [dark, setDark] = React.useState(false);
   const interests = (state as any).interests as string[] | undefined;
+
+  // 배지 슬롯 — 실제 완독(요약까지 끝낸) 논문·연속 학습일·완독 수로 잠금 해제 여부 계산.
+  const completedPapers = papers.filter(p => Boolean(state.progress?.[`${p.id}_summary`]));
+  const BADGES: Badge[] = [
+    { emoji: '🏆', name: '첫 골드',    locked: !completedPapers.some(p => p.grade === 'S') },
+    { emoji: '📖', name: '10편 돌파',  locked: state.papersDone < 10 },
+    { emoji: '🔥', name: '3일 연속',   locked: state.streakDays < 3 },
+    { emoji: '🤖', name: 'NLP 입문',   locked: !completedPapers.some(p => p.cat === 'NLP') },
+    { emoji: '👁️', name: 'CV 입문',    locked: !completedPapers.some(p => p.cat === 'CV') },
+    { emoji: '🎮', name: 'RL 입문',    locked: !completedPapers.some(p => p.cat === 'RL') },
+  ];
 
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);

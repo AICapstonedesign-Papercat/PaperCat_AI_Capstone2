@@ -1,6 +1,19 @@
 // 캡디1(PaperCat_AI_Capstone1/src/store.js) 그대로 이식 — AsyncStorage 기반 미니 전역 스토어.
+// Supabase 연동: AsyncStorage는 그대로 로컬 캐시/게스트 저장소로 쓰고, 로그인된(비게스트)
+// 사용자는 profiles/paper_progress 테이블과 추가로 동기화한다 (하이드레이션은 pull,
+// set()은 push) — src/lib/db.ts 참고.
 import { useEffect, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase, SUPABASE_CONFIGURED } from './lib/supabase';
+import {
+  fetchProfile,
+  fetchPaperProgress,
+  profileRowToState,
+  progressRowsToState,
+  statePatchToProfileColumns,
+  upsertProfile,
+  upsertPaperProgress,
+} from './lib/db';
 
 const KEY = '@papercat/state/v2';
 
@@ -59,6 +72,10 @@ const DEFAULT: PaperCatState = {
   seenPapers: [],
   progress: { attention: 0.6, bert: 0.8 },
 };
+// ^ Demo placeholder values — only ever seen briefly before AsyncStorage/Supabase
+// resolve, or in the .env-not-configured dev fallback (SUPABASE_CONFIGURED === false,
+// see src/lib/supabase.ts). Real signed-in users get overwritten by hydrateFromSupabase()
+// below within one round-trip of login/app-start.
 
 type Listener = (state: PaperCatState) => void;
 const listeners = new Set<Listener>();
@@ -71,9 +88,10 @@ let persistQueued = false;
 
 type StoreUpdate = Partial<PaperCatState> | ((s: PaperCatState) => Partial<PaperCatState>);
 
-function applyUpdate(update: StoreUpdate) {
+function applyUpdate(update: StoreUpdate): Partial<PaperCatState> {
   const patch = typeof update === 'function' ? update(cache) : update;
   cache = { ...cache, ...patch };
+  return patch;
 }
 
 function parseState(raw: string): Partial<PaperCatState> {
@@ -139,6 +157,92 @@ function emit() {
   [...listeners].forEach(fn => fn(cache));
 }
 
+// ---------------------------------------------------------------------------
+// Supabase sync — only active for signed-in (non-guest) users when .env is
+// configured. Guests keep working entirely off AsyncStorage, unchanged.
+// ---------------------------------------------------------------------------
+
+let currentUserId: string | null = null;
+
+async function hydrateFromSupabase(userId: string) {
+  try {
+    const [profile, progressRows] = await Promise.all([fetchProfile(userId), fetchPaperProgress(userId)]);
+    const patch: Partial<PaperCatState> = {};
+    if (profile) Object.assign(patch, profileRowToState(profile));
+    Object.assign(patch, progressRowsToState(progressRows));
+    if (Object.keys(patch).length > 0) {
+      cache = { ...cache, ...patch, isGuest: false };
+      emit();
+      schedulePersist();
+    }
+  } catch (err) {
+    console.warn('[store] Supabase profile/progress 조회 실패 — 로컬 캐시 유지:', err);
+  }
+}
+
+if (SUPABASE_CONFIGURED) {
+  supabase.auth.onAuthStateChange((event, session) => {
+    const userId = session?.user?.id ?? null;
+    currentUserId = userId;
+    if (userId && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+      load().then(() => hydrateFromSupabase(userId));
+    }
+  });
+}
+
+let pendingProfileColumns: Record<string, unknown> = {};
+let profilePushQueued = false;
+
+function queueProfilePush(columns: Record<string, unknown>) {
+  if (!currentUserId || Object.keys(columns).length === 0) return;
+  pendingProfileColumns = { ...pendingProfileColumns, ...columns };
+  if (profilePushQueued) return;
+  profilePushQueued = true;
+
+  Promise.resolve().then(async () => {
+    profilePushQueued = false;
+    const columnsToSend = pendingProfileColumns;
+    pendingProfileColumns = {};
+    const userId = currentUserId;
+    if (!userId || Object.keys(columnsToSend).length === 0) return;
+    try {
+      await upsertProfile(userId, columnsToSend);
+    } catch (err) {
+      console.warn('[store] Supabase profile 저장 실패:', err);
+    }
+  });
+}
+
+function pushProgress(paperId: string, patch: { progress?: number; seen?: boolean; summary_done?: boolean }) {
+  const userId = currentUserId;
+  if (!userId) return;
+  upsertPaperProgress(userId, paperId, patch).catch(err => {
+    console.warn('[store] Supabase paper_progress 저장 실패:', err);
+  });
+}
+
+function syncToSupabase(patch: Partial<PaperCatState>, prev: PaperCatState) {
+  if (!SUPABASE_CONFIGURED || !currentUserId || cache.isGuest) return;
+
+  queueProfilePush(statePatchToProfileColumns(patch));
+
+  if (patch.seenPapers) {
+    const added = patch.seenPapers.filter(id => !(prev.seenPapers || []).includes(id));
+    added.forEach(id => pushProgress(id, { seen: true }));
+  }
+
+  if (patch.progress) {
+    for (const [key, value] of Object.entries(patch.progress)) {
+      if (prev.progress?.[key] === value) continue;
+      if (key.endsWith('_summary')) {
+        pushProgress(key.slice(0, -'_summary'.length), { summary_done: Boolean(value) });
+      } else {
+        pushProgress(key, { progress: Number(value) });
+      }
+    }
+  }
+}
+
 export type StoreSetter = (patch: StoreUpdate) => void;
 
 export function useStore(): [PaperCatState, StoreSetter] {
@@ -159,9 +263,11 @@ export function useStore(): [PaperCatState, StoreSetter] {
 
   const set = useCallback((update: StoreUpdate) => {
     if (!loaded) pendingUpdates.push(update);
-    applyUpdate(update);
+    const prev = cache;
+    const patch = applyUpdate(update);
     emit();
     schedulePersist();
+    syncToSupabase(patch, prev);
   }, []);
 
   return [state, set];

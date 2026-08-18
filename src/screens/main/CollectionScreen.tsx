@@ -1,9 +1,10 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, Image, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/tokens';
 import { ProgressBar, Divider, GuestLockOverlay, SpotlightTour, type TourStep } from '../../components';
 import { useStore } from '../../store';
+import { usePapers } from '../../data/papers';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
@@ -27,21 +28,45 @@ type Item = {
   isNew?: boolean;
 };
 
-// Figma "Collection (최종)" 확정 시안 — 6칸 그리드, 4개 수집 + 4개 미수집(?)
-const ITEMS: Item[] = [
-  { id: 'attention', grade: 'S',      title: 'Attention is\nAll You Need', cat: 'NLP', img: require('../../../assets/badges/badge-gold-1.png'), isNew: true },
-  { id: 'bert',      grade: 'S',      title: 'BERT',                       cat: 'NLP', img: require('../../../assets/badges/badge-gold-2.png') },
-  { id: 'gpt2',      grade: 'Normal', title: 'GPT-2',                      cat: 'NLP', img: require('../../../assets/badges/badge-silver-1.png') },
-  { id: 'resnet',    grade: 'S',      title: 'ResNet',                     cat: 'CV',  img: require('../../../assets/badges/badge-gold-3.png') },
-  { id: 'l1', grade: null, title: null, cat: null },
-  { id: 'l2', grade: null, title: null, cat: null },
-  { id: 'l3', grade: null, title: null, cat: null },
-  { id: 'l4', grade: null, title: null, cat: null },
+// "완독" 뱃지 이미지가 논문별로 따로 없어서 등급으로만 구분 — S는 골드 3종을 순환, Normal은 실버 1종.
+const GOLD_BADGES = [
+  require('../../../assets/badges/badge-gold-1.png'),
+  require('../../../assets/badges/badge-gold-2.png'),
+  require('../../../assets/badges/badge-gold-3.png'),
 ];
+const SILVER_BADGE = require('../../../assets/badges/badge-silver-1.png');
 
 export default function CollectionScreen({ navigation }: Props) {
   const [cat, setCat] = useState('전체');
   const [state, set] = useStore();
+  const { papers } = usePapers();
+
+  // 수집 기준: 한 줄 요약 챌린지까지 끝낸 논문 = 도감에 실제로 박제된 논문.
+  // (읽기 진행률만 있는 상태는 "이어서 학습" 대상이지, 아직 수집된 배지는 아님)
+  const items: Item[] = useMemo(() => {
+    return papers.map((p, i): Item => {
+      const collected = Boolean(state.progress?.[`${p.id}_summary`]);
+      if (!collected) return { id: p.id, grade: null, title: null, cat: p.cat };
+      return {
+        id: p.id,
+        grade: p.grade,
+        title: p.title.length > 24 ? `${p.title.slice(0, 22)}…` : p.title,
+        cat: p.cat,
+        img: p.grade === 'S' ? GOLD_BADGES[i % GOLD_BADGES.length] : SILVER_BADGE,
+        isNew: !(state.seenPapers || []).includes(p.id),
+      };
+    });
+  }, [papers, state.progress, state.seenPapers]);
+
+  const collectedCount = items.filter(it => it.grade).length;
+  const categoryRatios = useMemo(() => {
+    const collected = items.filter(it => it.grade);
+    const total = collected.length || 1;
+    return (['NLP', 'CV', 'RL'] as const).map(c => ({
+      l: c,
+      v: collected.filter(it => it.cat === c).length / total,
+    }));
+  }, [items]);
 
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
@@ -61,7 +86,7 @@ export default function CollectionScreen({ navigation }: Props) {
         <View style={s.head}>
           <View>
             <Text style={s.h1}>내 도감</Text>
-            <Text style={s.countText}><Text style={s.countNum}>12</Text>편 수집 · 다음 배지까지 논문 1편</Text>
+            <Text style={s.countText}><Text style={s.countNum}>{collectedCount}</Text>편 수집 · 전체 {papers.length}편 중</Text>
           </View>
           <View ref={catTabsRef} style={{ flexDirection: 'row', gap: 18 }}>
             {CATS.map(c => (
@@ -73,7 +98,7 @@ export default function CollectionScreen({ navigation }: Props) {
         </View>
 
         <View ref={gridRef} style={s.grid}>
-          {ITEMS.filter(it => cat === '전체' || it.cat === cat).map(it => {
+          {items.filter(it => cat === '전체' || it.cat === cat).map(it => {
             if (!it.grade) {
               return (
                 <View key={it.id} style={s.card}>
@@ -111,7 +136,7 @@ export default function CollectionScreen({ navigation }: Props) {
         <View ref={statsRef} style={s.statsRow}>
           <View style={{ flex: 1 }}>
             <Text style={s.statsTitle}>분야별 학습 비율</Text>
-            {[{ l: 'NLP', v: 0.6 }, { l: 'CV', v: 0.3 }, { l: 'RL', v: 0.1 }].map((r) => (
+            {categoryRatios.map((r) => (
               <View key={r.l} style={s.statRow}>
                 <Text style={s.statLabel}>{r.l}</Text>
                 <View style={{ flex: 1 }}><ProgressBar value={r.v} height={6} fillColor={colors.accent2} trackColor={colors.hairline} /></View>

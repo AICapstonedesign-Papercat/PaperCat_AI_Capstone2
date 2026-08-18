@@ -6,7 +6,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 import { colors, readingWidth } from '../../theme/tokens';
 import { useStore } from '../../store';
-import { PAPERS } from '../../data/papers';
+import { usePaper } from '../../data/papers';
 import { playPurring } from '../../audio/catSounds';
 
 const { width } = Dimensions.get('window');
@@ -80,7 +80,8 @@ type Props = NativeStackScreenProps<ParamListBase>;
 export default function LearningCompleteScreen({ navigation, route }: Props) {
   // params not typed yet
   const { paperId = 'attention', paperTitle = 'Attention is All You Need', xpEarned = 80 } = (route?.params as any) || {};
-  const grade = PAPERS.find(p => p.id === paperId)?.grade || 'S';
+  const { paper } = usePaper(paperId);
+  const grade = paper?.grade || 'S';
   const gradeLabel = grade === 'S' ? 'GOLD' : 'SILVER';
   const badgeImg = BADGE_BY_PAPER[paperId] || (grade === 'S' ? BADGE_BY_PAPER.attention : BADGE_BY_PAPER.gpt2);
   const [state, set] = useStore();

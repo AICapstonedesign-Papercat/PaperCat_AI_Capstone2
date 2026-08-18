@@ -1,11 +1,12 @@
-import React from 'react';
-import { View, Text, Image, ScrollView, Pressable, StyleSheet, Alert, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Image, ScrollView, Pressable, StyleSheet, Alert, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, readingWidth, centerColumn } from '../../theme/tokens';
 import { CatBubble, Card, Divider, GradeBadge } from '../../components';
 import { useStore } from '../../store';
-import { PAPERS } from '../../data/papers';
+import { usePaper } from '../../data/papers';
+import { generateOverview, toPaperContext, type OverviewResult } from '../../lib/ai';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
@@ -15,10 +16,29 @@ export default function PaperDetailScreen({ navigation, route }: Props) {
   // route.params 타입 미정의 — as any로 접근 (per-screen param list 아직 없음)
   const paperId = (route.params as any)?.paperId || 'attention';
   const [state] = useStore();
-  const paper = PAPERS.find((p) => p.id === paperId);
+  const { paper } = usePaper(paperId);
   const summaryDone = state.progress?.[paperId + '_summary'] || false;
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
+
+  const [overview, setOverview] = useState<OverviewResult | null>(null);
+  const [loadingOverview, setLoadingOverview] = useState(true);
+  const [overviewFailed, setOverviewFailed] = useState(false);
+
+  useEffect(() => {
+    if (!paper) return;
+    let cancelled = false;
+    setLoadingOverview(true);
+    setOverviewFailed(false);
+    generateOverview(toPaperContext(paper))
+      .then(result => { if (!cancelled) setOverview(result); })
+      .catch(err => {
+        console.warn('[PaperDetail] generateOverview 실패:', err);
+        if (!cancelled) setOverviewFailed(true);
+      })
+      .finally(() => { if (!cancelled) setLoadingOverview(false); });
+    return () => { cancelled = true; };
+  }, [paper?.id]);
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -38,16 +58,41 @@ export default function PaperDetailScreen({ navigation, route }: Props) {
       <View style={centerColumn}>
       <ScrollView style={readingWidth} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
 
-        {/* Figma: ① 다이어그램(좌) | ② 스토리텔링+③ 액션(우) 2단 분할 */}
+        {/* 구조 시각화·스토리텔링·핵심 개념은 generate-overview Edge Function이 논문별로 생성 —
+            supabase/functions/generate-overview/index.ts의 PROMPT 참고. */}
+        {loadingOverview ? (
+          <View style={s.loadingBlock}>
+            <ActivityIndicator color={colors.accent2} />
+            <Text style={s.loadingText}>냥이가 논문을 분석하고 있어요…</Text>
+          </View>
+        ) : overviewFailed || !overview ? (
+          <Text style={s.errorText}>내용을 불러오지 못했어요. 뒤로 갔다가 다시 들어와봐 주세요냥.</Text>
+        ) : (
         <View style={[s.twoCol, isWide && s.twoColWide]}>
         <View style={[s.colLeft, isWide && s.colLeftWide]}>
         <Section num={1} title="핵심 구조 시각화" />
-        <Card style={{ padding: 0, alignItems: 'center', overflow: 'hidden' }}>
-          <Image
-            source={require('../../../assets/transformer-arch.png')}
-            style={s.archImg}
-            resizeMode="contain"
-          />
+        <Card style={{ paddingVertical: 20 }}>
+          {overview.groups.map((group, gi) => (
+            <View key={gi}>
+              <View style={s.groupBox}>
+                <Text style={s.groupTitle}>{group.title}</Text>
+                {group.steps.map((step, si) => (
+                  <View key={si}>
+                    <View style={s.stepRow}>
+                      <View style={s.stepBadge}><Text style={s.stepBadgeText}>{si + 1}</Text></View>
+                      <Text style={s.stepText}>{step}</Text>
+                    </View>
+                    {si < group.steps.length - 1 && (
+                      <View style={s.stepConnectorWrap}><Feather name="arrow-down" size={12} color={colors.faint} /></View>
+                    )}
+                  </View>
+                ))}
+              </View>
+              {gi < overview.groups.length - 1 && (
+                <View style={s.groupConnectorWrap}><Feather name="arrow-down" size={18} color={colors.accent2} /></View>
+              )}
+            </View>
+          ))}
         </Card>
         </View>
 
@@ -55,32 +100,32 @@ export default function PaperDetailScreen({ navigation, route }: Props) {
         <Section num={2} title="스토리텔링" />
         <View style={s.story}>
           <Text style={s.qmark}>"</Text>
-          <Text style={s.storyP}>옛날 옛적에 아주 긴 편지를 한 글자씩 차례대로 읽는 느림보 우편집배원이 있었습니다. 이 배달부는 편지의 첫 글자부터 마지막 글자까지 줄지어 한 걸음씩 걸어가야 했기 때문에, 문장이 조금만 길어져도 편지를 모두 전하는 데 너무 오랜 시간이 걸렸습니다.</Text>
-          <Text style={s.storyP}>특히 먼 거리에 있는 중요한 단어들 사이의 관계를 파악할 때는 길고 험난한 과정을 거쳐야만 했습니다.</Text>
+          {overview.storyParagraphs.map((p, i) => (
+            <Text key={i} style={s.storyP}>{p}</Text>
+          ))}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 16, gap: 12 }}>
             <Image source={require('../../../assets/cat/read_book.png')} style={{ width: 100, height: 100 }} resizeMode="contain" />
-            <Text style={{ flex: 1, fontSize: 13, fontFamily: 'Pretendard-Regular', color: colors.muted, lineHeight: 20, fontStyle: 'italic' }}>그때, 트랜스포머라는 똑똑한 새 배달부가 나타났습니다...</Text>
+            <Text style={{ flex: 1, fontSize: 13, fontFamily: 'Pretendard-Regular', color: colors.muted, lineHeight: 20, fontStyle: 'italic' }}>{overview.pullQuote}</Text>
           </View>
-          <Text style={[s.storyP, { color: colors.text, fontFamily: 'Pretendard-Regular', fontStyle: 'italic' }]}>
-            "이제는 줄을 서서 기다릴 필요 없이, 편지의 모든 단어를 한눈에 보고 바로 연결해 보세요."
-          </Text>
-          <Text style={[s.storyP, { marginBottom: 0 }]}>그러던 어느 날, 트랜스포머라는 이름의 똑똑한 새 배달부가 나타났습니다. 트랜스포머는 기존의 복잡한 순차 계산을 모두 없애고 전체 편지를 동시에 살펴봄으로써, AI가 훨씬 더 빠르고 정확하게 글을 이해할 수 있는 놀라운 변화를 이끌어냈습니다.</Text>
         </View>
 
         {/* highlight: Figma 그대로 — 좌측 세로바 + 헤딩(가운데정렬 pill 아님) */}
         <View style={s.highlight}>
-          <Text style={s.highlightText}>핵심 개념 : Self-Attention (자기 주의 메커니즘)</Text>
+          <Text style={s.highlightText}>핵심 개념 : {overview.conceptName}</Text>
         </View>
 
         {/* why-it-matters: content directly on bg, no card box */}
         <View style={s.whyBlock}>
           <Text style={s.whyLabel}>왜 중요할까?</Text>
-          <Text style={s.whyBody}>Self-Attention은 문장 속 모든 단어가 다른 모든 단어와의 관계를 동시에 계산하는 메커니즘입니다. 기존 RNN/LSTM이 순차적으로 처리하던 것과 달리, 병렬 처리가 가능해 학습 속도가 비약적으로 향상되었고 먼 거리의 단어 간 관계도 정확하게 파악합니다. GPT, BERT, ChatGPT 등 현재 거의 모든 AI 언어 모델의 핵심 기반입니다.</Text>
+          <Text style={s.whyBody}>{overview.whyItMatters}</Text>
         </View>
+        </View>
+        </View>
+        )}
 
         <Divider style={{ marginTop: 8, marginBottom: 8 }} />
 
-        {/* Section 3 — next actions */}
+        {/* Section 3 — next actions (overview 로딩과 무관하게 항상 접근 가능) */}
         <Section num={3} title="다음은 뭘 해볼래냥?" />
         <View style={{ marginBottom: 20 }}>
           {[
@@ -122,7 +167,7 @@ export default function PaperDetailScreen({ navigation, route }: Props) {
           onPress={() => {
             if (state.isGuest) { navigation.navigate('CatAdoption'); return; }
             summaryDone
-              ? navigation.navigate('LearningComplete', { paperId, paperTitle: 'Attention is All You Need' })
+              ? navigation.navigate('LearningComplete', { paperId, paperTitle: paper?.title ?? '' })
               : Alert.alert('한 줄 요약 필수', '한 줄 요약 챌린지를 먼저 완료해줘냥!');
           }}
         >
@@ -133,8 +178,6 @@ export default function PaperDetailScreen({ navigation, route }: Props) {
             </Text>
           </View>
         </Pressable>
-        </View>
-        </View>
       </ScrollView>
       </View>
     </SafeAreaView>
@@ -170,7 +213,22 @@ const s = StyleSheet.create({
   colRight: {},
   colRightWide: { flex: 1 },
 
-  archImg: { width: '100%', height: 750, borderRadius: 12 },
+  loadingBlock: { alignItems: 'center', paddingVertical: 60, gap: 14 },
+  loadingText: { fontSize: 13, fontFamily: 'Pretendard-Regular', color: colors.muted },
+  errorText: { fontSize: 14, fontFamily: 'Pretendard-Regular', color: colors.muted, textAlign: 'center', paddingVertical: 60 },
+
+  // structure diagram (replaces the old static transformer-arch.png) — grouped
+  // into stage "boxes" (Section 1 architecture blocks), each with its own
+  // numbered sub-step flow, mirroring how the paper's own figure would box things.
+  groupBox: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.accent2, borderRadius: 16, padding: 16, marginBottom: 4 },
+  groupTitle: { fontSize: 12.5, fontFamily: 'Pretendard-Bold', color: colors.accent2, letterSpacing: 0.4, marginBottom: 12 },
+  groupConnectorWrap: { alignItems: 'center', paddingVertical: 8 },
+
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  stepBadge: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.accent2, alignItems: 'center', justifyContent: 'center' },
+  stepBadgeText: { fontSize: 12, fontFamily: 'Pretendard-Bold', color: '#fff' },
+  stepText: { flex: 1, fontSize: 14, fontFamily: 'Pretendard-Regular', color: colors.text },
+  stepConnectorWrap: { alignItems: 'center', paddingVertical: 4, marginLeft: 13 },
 
   // story: no border, no fill — content directly on bg
   story: { paddingVertical: 8, marginBottom: 4 },

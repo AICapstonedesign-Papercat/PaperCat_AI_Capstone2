@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -7,33 +7,35 @@ import type { ParamListBase } from '@react-navigation/native';
 import { colors, readingWidth, centerColumn } from '../../theme/tokens';
 import { CatBubble, Card, ProgressBar, XPBurst, GuestBanner, Divider } from '../../components';
 import { useStore } from '../../store';
+import { usePaper } from '../../data/papers';
+import { gradeSummary, toPaperContext, type GradeResult } from '../../lib/ai';
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
-const KEYWORDS = ['Attention', 'Transformer', '병렬', 'Self-Attention', 'RNN'];
-
-function gradeFor(text: string) {
-  const lower = text.toLowerCase();
-  let hits = 0;
-  KEYWORDS.forEach(k => { if (lower.includes(k.toLowerCase())) hits++; });
-  const lengthOk = text.length >= 25 && text.length <= 120;
-  return Math.min(100, hits * 18 + (lengthOk ? 18 : 0) + (text.length > 0 ? 10 : 0) + Math.floor(Math.random() * 6));
-}
-
 export default function SummaryChallengeScreen({ navigation, route }: Props) {
   const paperId = (route?.params as any)?.paperId || 'attention'; // params not typed yet
+  const { paper } = usePaper(paperId);
   const [state, set] = useStore();
   const [text, setText] = useState('');
-  const [score, setScore] = useState<number | null>(null);
+  const [result, setResult] = useState<GradeResult | null>(null);
+  const [grading, setGrading] = useState(false);
   const [showXP, setShowXP] = useState(false);
   const [showGuest, setShowGuest] = useState(state.isGuest);
 
-  const submit = () => {
-    if (!text.trim()) return;
-    const s = gradeFor(text);
-    setScore(s);
-    setShowXP(true);
-    setTimeout(() => setShowXP(false), 1000);
+  const submit = async () => {
+    if (!text.trim() || grading || !paper) return;
+    setGrading(true);
+    try {
+      const graded = await gradeSummary(toPaperContext(paper), text.trim());
+      setResult(graded);
+      setShowXP(true);
+      setTimeout(() => setShowXP(false), 1000);
+    } catch (err) {
+      console.warn('[SummaryChallenge] gradeSummary 실패:', err);
+      setResult({ score: 0, feedback: '앗, 채점을 못 가져왔어냥. 잠시 후 다시 시도해줘냥', matchedKeywords: [] });
+    } finally {
+      setGrading(false);
+    }
   };
 
   return (
@@ -53,7 +55,7 @@ export default function SummaryChallengeScreen({ navigation, route }: Props) {
         {/* Topic block — content directly on bg, no cream card */}
         <Card style={{ marginBottom: 14 }}>
           <Text style={s.topicKicker}>주제</Text>
-          <Text style={s.topicTitle}>Attention is All You Need</Text>
+          <Text style={s.topicTitle}>{paper?.title ?? '...'}</Text>
           <Text style={s.topicSub}>1문장으로 작성해보라냥!!</Text>
         </Card>
 
@@ -65,39 +67,32 @@ export default function SummaryChallengeScreen({ navigation, route }: Props) {
           placeholder="예: Transformer는 Self-Attention을 통해…"
           placeholderTextColor={colors.faint}
           maxLength={200}
+          editable={!grading}
         />
         <Text style={s.charCount}>{text.length} / 200</Text>
 
-        {/* Keyword hints — monochrome uppercase letterspaced labels, no filled pills */}
-        <Text style={s.kwLabel}>이런 키워드가 들어가면 좋아요</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 4 }}>
-          {KEYWORDS.map(k => {
-            const used = text.toLowerCase().includes(k.toLowerCase());
-            return (
-              <View key={k} style={s.kwRow}>
-                {used && <Feather name="check" size={11} color={colors.muted} />}
-                <Text style={[s.kwText, used && s.kwUsedText]}>{k}</Text>
-              </View>
-            );
-          })}
-        </View>
-
         {/* Score result — no cream card, content directly on bg, hairline top */}
-        {score !== null && (
+        {result !== null && (
           <View style={s.scoreBlock}>
             <Divider style={{ marginBottom: 20 }} />
             <Text style={s.scoreKicker}>AI FEEDBACK</Text>
             {/* Large score number in ink, accent only on the key figure */}
-            <Text style={s.scoreNum}>{score}</Text>
+            <Text style={s.scoreNum}>{result.score}</Text>
             <Text style={s.scoreDenom}>/ 100</Text>
             <View style={{ width: '100%', marginVertical: 16 }}>
-              <ProgressBar value={score / 100} height={8} fillColor={colors.accent2} trackColor={colors.hairline} />
+              <ProgressBar value={result.score / 100} height={8} fillColor={colors.accent2} trackColor={colors.hairline} />
             </View>
-            <Text style={s.scoreFeedback}>
-              {score >= 85 ? '훌륭한 요약이냥! 핵심 키워드를 잘 담아냈어' :
-               score >= 65 ? '좋아냥. 키워드 1~2개만 더 넣으면 완벽해질 거야' :
-                              '조금 더 구체적으로 적어보자냥. 키워드를 활용해봐'}
-            </Text>
+            <Text style={s.scoreFeedback}>{result.feedback}</Text>
+            {result.matchedKeywords.length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14, justifyContent: 'center' }}>
+                {result.matchedKeywords.map(k => (
+                  <View key={k} style={s.kwRow}>
+                    <Feather name="check" size={11} color={colors.muted} />
+                    <Text style={[s.kwText, s.kwUsedText]}>{k}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -108,13 +103,19 @@ export default function SummaryChallengeScreen({ navigation, route }: Props) {
 
       {/* CTA footer — solid accent, pill, no gradient */}
       <View style={s.footer}>
-        <Pressable onPress={score !== null ? () => {
+        <Pressable disabled={grading} onPress={result !== null ? () => {
           set((prev): any => ({ progress: { ...prev.progress, [paperId + '_summary']: true } }));
-          navigation.navigate('LearningComplete', { paperId, paperTitle: 'Attention is All You Need', xpEarned: score >= 85 ? 70 : score >= 65 ? 50 : 30 });
+          navigation.navigate('LearningComplete', { paperId, paperTitle: paper?.title ?? '', xpEarned: result.score >= 85 ? 70 : result.score >= 65 ? 50 : 30 });
         } : submit}>
-          <View style={[s.cta, readingWidth, { alignSelf: 'center' }]}>
-            <Text style={s.ctaText}>{score !== null ? '완료하기' : 'AI 채점받기'}</Text>
-            <Feather name={score !== null ? 'check' : 'send'} size={20} color="#fff" />
+          <View style={[s.cta, readingWidth, { alignSelf: 'center' }, grading && { opacity: 0.6 }]}>
+            {grading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Text style={s.ctaText}>{result !== null ? '완료하기' : 'AI 채점받기'}</Text>
+                <Feather name={result !== null ? 'check' : 'send'} size={20} color="#fff" />
+              </>
+            )}
           </View>
         </Pressable>
       </View>

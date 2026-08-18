@@ -5,7 +5,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../theme/tokens';
 import { useStore } from '../../store';
-import { PAPERS } from '../../data/papers';
+import { usePaper, usePapers } from '../../data/papers';
 import { SectionTitle, GradeBadge, ProgressBar, SpotlightTour, type TourStep } from '../../components';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
@@ -30,22 +30,43 @@ const TOUR_STEPS_GUEST: TourStep[] = [
 
 // Figma "Home (최종)" 확정 시안 그대로 — 마스코트+인사 한 줄, 하트만 있는 스탯,
 // 추천논문/이어서학습 2단 분할, 주간학습 스탯, 최근 도감 배지줄.
-const RECENT_BADGES = [
-  { id: 'attention', title: 'Attention is All\nYou Need', img: require('../../../assets/badges/badge-gold-1.png') },
-  { id: 'bert',      title: 'BERT',                        img: require('../../../assets/badges/badge-gold-2.png') },
-  { id: 'gpt2',      title: 'GPT-2',                        img: require('../../../assets/badges/badge-silver-1.png') },
-  { id: 'resnet',    title: 'ResNet',                       img: require('../../../assets/badges/badge-gold-3.png') },
+// "완독" 뱃지 이미지가 논문별로 따로 없어서 등급으로만 구분 — CollectionScreen과 동일한 규칙.
+const GOLD_BADGES = [
+  require('../../../assets/badges/badge-gold-1.png'),
+  require('../../../assets/badges/badge-gold-2.png'),
+  require('../../../assets/badges/badge-gold-3.png'),
 ];
+const SILVER_BADGE = require('../../../assets/badges/badge-silver-1.png');
 
 export default function HomeScreen({ navigation }: Props) {
   const [state, set] = useStore();
-  const recPaper = PAPERS.find(p => p.id === REC_PAPER_ID);
+  const { paper: recPaper } = usePaper(REC_PAPER_ID);
+  const { papers } = usePapers();
   const [challenges, setChallenges] = React.useState([
     { id: 1, text: '논문 1편 완료하기', xp: 50, done: true },
     { id: 2, text: '한 줄 요약 작성하기', xp: 20, done: false },
   ]);
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
+
+  // "이어서 학습하기" — 진행률이 0보다 크고 아직 안 끝난(<1) 논문 중 하나.
+  const continuePaperId = Object.keys(state.progress || {}).find(k => {
+    if (k.endsWith('_summary')) return false;
+    const v = state.progress[k];
+    return typeof v === 'number' && v > 0 && v < 1;
+  });
+  const continuePaper = continuePaperId ? papers.find(p => p.id === continuePaperId) : undefined;
+  const continueProgress = continuePaperId ? Number(state.progress[continuePaperId]) : 0;
+
+  // 최근 도감 — 한 줄 요약까지 끝낸(수집된) 논문만. CollectionScreen과 동일한 뱃지 규칙.
+  const recentBadges = papers
+    .filter(p => Boolean(state.progress?.[`${p.id}_summary`]))
+    .slice(0, 4)
+    .map((p, i) => ({
+      id: p.id,
+      title: p.title.length > 20 ? `${p.title.slice(0, 18)}…` : p.title,
+      img: p.grade === 'S' ? GOLD_BADGES[i % GOLD_BADGES.length] : SILVER_BADGE,
+    }));
 
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
@@ -101,13 +122,17 @@ export default function HomeScreen({ navigation }: Props) {
 
             <View style={[s.colRight, isWide && s.colRightWide]}>
               <SectionTitle title="이어서 학습하기" rule />
-              <Pressable onPress={() => navigation.navigate('StageMap', { paperId: 'bert' })}>
-                <Text style={s.continueTitle}>BERT: Pre-training of Deep Bidirectional…</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ flex: 1 }}><ProgressBar value={0.8} height={8} fillColor={colors.accent2} trackColor={colors.hairline} /></View>
-                  <Text style={s.pct}>80%</Text>
-                </View>
-              </Pressable>
+              {continuePaper ? (
+                <Pressable onPress={() => navigation.navigate('StageMap', { paperId: continuePaper.id })}>
+                  <Text style={s.continueTitle} numberOfLines={1}>{continuePaper.title}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ flex: 1 }}><ProgressBar value={continueProgress} height={8} fillColor={colors.accent2} trackColor={colors.hairline} /></View>
+                    <Text style={s.pct}>{Math.round(continueProgress * 100)}%</Text>
+                  </View>
+                </Pressable>
+              ) : (
+                <Text style={s.continueEmpty}>아직 읽던 논문이 없어요 — 탐색에서 시작해보세요</Text>
+              )}
             </View>
           </View>
 
@@ -179,14 +204,18 @@ export default function HomeScreen({ navigation }: Props) {
               <View ref={badgesRef}>
               <SectionTitle title="최근 도감" right="전체 보기 →" />
               <Pressable onPress={() => navigation.navigate('Collection')}>
-                <View style={s.badgeRow}>
-                  {RECENT_BADGES.map(b => (
-                    <View key={b.id} style={s.badgeItem}>
-                      <Image source={b.img} style={s.badgeImg} resizeMode="contain" />
-                      <Text style={s.badgeTitle} numberOfLines={2}>{b.title}</Text>
-                    </View>
-                  ))}
-                </View>
+                {recentBadges.length > 0 ? (
+                  <View style={s.badgeRow}>
+                    {recentBadges.map(b => (
+                      <View key={b.id} style={s.badgeItem}>
+                        <Image source={b.img} style={s.badgeImg} resizeMode="contain" />
+                        <Text style={s.badgeTitle} numberOfLines={2}>{b.title}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={s.continueEmpty}>아직 수집한 배지가 없어요 — 논문을 완독해보세요</Text>
+                )}
               </Pressable>
               </View>
             </>
@@ -228,6 +257,7 @@ const s = StyleSheet.create({
   studyLink: { fontSize: 14.5, fontFamily: 'Pretendard-Bold', color: colors.ink },
 
   continueTitle: { fontSize: 15, fontFamily: 'SUIT-Medium', fontWeight: undefined, color: colors.ink, marginBottom: 12 },
+  continueEmpty: { fontSize: 13, fontFamily: 'Pretendard-Regular', color: colors.muted },
   pct: { fontFamily: 'SUIT-Medium', fontWeight: undefined, color: colors.accent },
 
   chal:     { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },

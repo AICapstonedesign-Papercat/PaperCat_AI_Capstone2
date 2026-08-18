@@ -6,7 +6,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../theme/tokens';
 import { GradeBadge, SpotlightTour, type TourStep } from '../../components';
 import { useStore } from '../../store';
-import { PAPERS, type Paper } from '../../data/papers';
+import { usePapers, type Paper } from '../../data/papers';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
@@ -29,6 +29,7 @@ export const GRADE_COLORS = {
 
 export default function ExploreScreen({ navigation }: Props) {
   const [state, set] = useStore();
+  const { papers } = usePapers();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('전체');
   const [mode, setMode] = useState('classic'); // 'classic' | 'trendy'
@@ -41,7 +42,7 @@ export default function ExploreScreen({ navigation }: Props) {
   const listRef = useRef<View>(null);
   const targetRefs = { search: searchRef, mode: modeRef, cat: catRef, list: listRef };
 
-  const list = PAPERS
+  const list = papers
     .filter(p =>
       (mode === 'trendy' ? p.trending : true) &&
       (cat === '전체' || p.cat === cat) &&
