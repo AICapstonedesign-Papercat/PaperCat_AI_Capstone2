@@ -93,8 +93,8 @@ export default function ProfileScreen({ navigation }: Props) {
               <Text style={s.statLabel}>누적 XP</Text>
             </View>
             <View style={s.statBox}>
-              <Text style={s.statBig}>87%</Text>
-              <Text style={s.statLabel}>도전 승률</Text>
+              <Text style={s.statBig}>{state.challengeAttempts > 0 ? `${Math.round((state.challengePasses / state.challengeAttempts) * 100)}%` : '—'}</Text>
+              <Text style={s.statLabel}>도전 승률{state.challengeAttempts > 0 ? ` (${state.challengeAttempts}회)` : ''}</Text>
             </View>
           </View>
 
@@ -129,7 +129,7 @@ export default function ProfileScreen({ navigation }: Props) {
               divider
             />
             <Setting ic="target" label="주간 목표"  sub="스트릭 커밋 설정"     right={<Text style={s.settingVal}>{state.weeklyGoalLabel || '꾸준히'}</Text>} divider />
-            <Setting ic="tag"    label="관심 분야"  sub="탐색 추천에 반영돼요"  right={<Text style={s.settingVal}>{interests?.slice(0, 2).join(' · ') || 'NLP · CV'}</Text>} divider />
+            <Setting ic="tag"    label="관심 분야"  sub="탐색 추천에 반영돼요"  right={<Text style={s.settingVal}>{interests && interests.length > 0 ? interests.slice(0, 2).join(' · ') : '미설정'}</Text>} divider />
             <Setting
               ic="book-open"
               label="AI 지식수준"

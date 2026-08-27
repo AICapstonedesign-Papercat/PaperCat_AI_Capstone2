@@ -5,6 +5,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { colors, readingWidth, centerColumn } from '../../theme/tokens';
 import { usePaper } from '../../data/papers';
 import { generateStory, toPaperContext, type StoryResult } from '../../lib/ai';
+import { useReadingSession, CHECKPOINT } from '../../hooks/useReadingSession';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
@@ -19,6 +20,8 @@ export default function StorytellingScreen({ navigation, route }: Props) {
   const { paper } = usePaper(paperId);
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
+
+  useReadingSession(paper?.id, CHECKPOINT.storytelling);
 
   const [story, setStory] = useState<StoryResult | null>(null);
   const [loading, setLoading] = useState(true);

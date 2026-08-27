@@ -33,6 +33,8 @@ export type ProfileRow = {
   weekly_goal_papers: number;
   weekly_goal_label: string;
   interests: string[];
+  challenge_attempts: number;
+  challenge_passes: number;
 };
 
 export type PaperProgressRow = {
@@ -92,6 +94,12 @@ const PROFILE_STATE_TO_COLUMN: Record<string, keyof ProfileRow> = {
   weeklyGoalPapers: 'weekly_goal_papers',
   weeklyGoalLabel: 'weekly_goal_label',
   interests: 'interests',
+  // challengeAttempts/challengePasses are deliberately NOT mapped here — they're
+  // written server-side only, via the record_challenge_attempt() RPC (atomic
+  // increment), and pulled into local state on hydration/after the RPC call.
+  // If they were in this map, a plain `set({challengeAttempts: n})` for local
+  // UI refresh would also push an upsert here, racing/overwriting the RPC's
+  // atomic increment.
 };
 
 // Fields in PaperCatState that get synced 1:1 to the `profiles` table.
@@ -114,6 +122,8 @@ export function profileRowToState(row: ProfileRow): Partial<PaperCatState> {
     weeklyGoalPapers: row.weekly_goal_papers,
     weeklyGoalLabel: row.weekly_goal_label,
     interests: row.interests,
+    challengeAttempts: row.challenge_attempts,
+    challengePasses: row.challenge_passes,
   };
 }
 
@@ -161,5 +171,102 @@ export async function upsertPaperProgress(
   const { error } = await supabase
     .from('paper_progress')
     .upsert({ user_id: userId, paper_id: paperId, ...patch }, { onConflict: 'user_id,paper_id' });
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Recent activity feed (StudyScreen "최근 활동") — paper_progress ordered by
+// updated_at, with the paper title embedded via the FK to `papers`.
+// ---------------------------------------------------------------------------
+export type RecentActivityRow = {
+  paper_id: string;
+  title: string;
+  seen: boolean;
+  summary_done: boolean;
+  progress: number;
+  updated_at: string;
+};
+
+export async function fetchRecentActivity(userId: string, limit: number = 10): Promise<RecentActivityRow[]> {
+  const { data, error } = await supabase
+    .from('paper_progress')
+    .select('paper_id, seen, summary_done, progress, updated_at, papers(title)')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data as any[]).map(row => ({
+    paper_id: row.paper_id,
+    title: row.papers?.title ?? row.paper_id,
+    seen: row.seen,
+    summary_done: row.summary_done,
+    progress: row.progress,
+    updated_at: row.updated_at,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// daily_activity — backs StudyScreen's weekly chart/heatmap. Written to via
+// touch_daily_streak() below rather than upserted directly from the client,
+// so minutes always add up atomically even if two screens finish around the
+// same time.
+// ---------------------------------------------------------------------------
+export type DailyActivityRow = { activity_date: string; minutes: number };
+
+export async function fetchDailyActivity(userId: string, sinceDate: string): Promise<DailyActivityRow[]> {
+  const { data, error } = await supabase
+    .from('daily_activity')
+    .select('activity_date, minutes')
+    .eq('user_id', userId)
+    .gte('activity_date', sinceDate)
+    .order('activity_date', { ascending: true });
+  if (error) throw error;
+  return data as DailyActivityRow[];
+}
+
+// Bumps streak_days (login-streak logic lives in the Postgres function so it's
+// atomic) and adds `minutes` to today's daily_activity row. Call with 0
+// minutes once per session just to touch the streak; call again with real
+// minutes when a reading session ends. Returns the resulting streak_days.
+export async function touchDailyStreak(userId: string, minutes: number = 0): Promise<number> {
+  const { data, error } = await supabase.rpc('touch_daily_streak', { p_user_id: userId, p_minutes: minutes });
+  if (error) throw error;
+  return data as number;
+}
+
+// ---------------------------------------------------------------------------
+// Summary Challenge win rate (ProfileScreen's "도전 승률")
+// ---------------------------------------------------------------------------
+export async function recordChallengeAttempt(userId: string, passed: boolean): Promise<void> {
+  const { error } = await supabase.rpc('record_challenge_attempt', { p_user_id: userId, p_passed: passed });
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Discussion voting (DiscussionScreen's vote bar)
+// ---------------------------------------------------------------------------
+export type DiscussionSide = 'pro' | 'critical';
+export type DiscussionVoteCounts = { pro: number; critical: number; mine: DiscussionSide | null };
+
+export async function fetchDiscussionVotes(paperId: string, userId: string): Promise<DiscussionVoteCounts> {
+  const { data, error } = await supabase
+    .from('discussion_votes')
+    .select('user_id, side')
+    .eq('paper_id', paperId);
+  if (error) throw error;
+  const rows = data as { user_id: string; side: DiscussionSide }[];
+  let pro = 0, critical = 0;
+  let mine: DiscussionSide | null = null;
+  for (const row of rows) {
+    if (row.side === 'pro') pro++; else critical++;
+    if (row.user_id === userId) mine = row.side;
+  }
+  return { pro, critical, mine };
+}
+
+export async function castDiscussionVote(userId: string, paperId: string, side: DiscussionSide): Promise<void> {
+  const { error } = await supabase
+    .from('discussion_votes')
+    .upsert({ user_id: userId, paper_id: paperId, side }, { onConflict: 'user_id,paper_id' });
   if (error) throw error;
 }

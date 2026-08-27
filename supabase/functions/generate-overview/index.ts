@@ -1,5 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { callGemini } from '../_shared/gemini.ts';
+import { supabaseAdmin } from '../_shared/supabaseAdmin.ts';
 import type { PaperContext } from '../_shared/types.ts';
 
 type RequestBody = { paper: PaperContext };
@@ -13,6 +14,25 @@ type OverviewResult = {
   conceptName: string;
   whyItMatters: string;
 };
+
+// Row shape of public.paper_overviews (supabase/migrations/20260826160000_paper_overview_cache.sql).
+type OverviewRow = {
+  groups: StructureGroup[];
+  story_paragraphs: string[];
+  pull_quote: string;
+  concept_name: string;
+  why_it_matters: string;
+};
+
+function rowToResult(row: OverviewRow): OverviewResult {
+  return {
+    groups: row.groups,
+    storyParagraphs: row.story_paragraphs,
+    pullQuote: row.pull_quote,
+    conceptName: row.concept_name,
+    whyItMatters: row.why_it_matters,
+  };
+}
 
 const RESPONSE_SCHEMA = {
   type: 'object',
@@ -75,9 +95,25 @@ Deno.serve(async req => {
 
   try {
     const { paper }: RequestBody = await req.json();
-    if (!paper?.title) {
+    if (!paper?.id || !paper?.title) {
       return new Response(JSON.stringify({ error: 'paper is required' }), {
         status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const db = supabaseAdmin();
+
+    // 이 논문(같은 paper.id → 같은 title/category)의 개요를 다른 사용자가 이미 생성해
+    // 뒀다면 캐시를 그대로 반환한다 — Gemini 호출 없이 즉시 응답, 비용도 0.
+    const { data: cached, error: fetchErr } = await db
+      .from('paper_overviews')
+      .select('groups, story_paragraphs, pull_quote, concept_name, why_it_matters')
+      .eq('paper_id', paper.id)
+      .maybeSingle();
+    if (fetchErr) console.warn('[generate-overview] cache lookup failed:', fetchErr.message);
+    if (cached) {
+      return new Response(JSON.stringify(rowToResult(cached as OverviewRow)), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -89,6 +125,21 @@ Deno.serve(async req => {
     });
 
     const parsed = JSON.parse(raw) as OverviewResult;
+
+    // Write-through: 캐시 저장은 best-effort. 실패해도(경합으로 인한 conflict 포함) 이번
+    // 요청의 응답 자체는 정상적으로 사용자에게 돌려준다.
+    const { error: upsertErr } = await db.from('paper_overviews').upsert(
+      {
+        paper_id: paper.id,
+        groups: parsed.groups,
+        story_paragraphs: parsed.storyParagraphs,
+        pull_quote: parsed.pullQuote,
+        concept_name: parsed.conceptName,
+        why_it_matters: parsed.whyItMatters,
+      },
+      { onConflict: 'paper_id' },
+    );
+    if (upsertErr) console.warn('[generate-overview] cache write failed:', upsertErr.message);
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

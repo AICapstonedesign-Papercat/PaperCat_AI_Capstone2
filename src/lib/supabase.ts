@@ -23,3 +23,11 @@ export const supabase = createClient(url, anonKey, {
     detectSessionInUrl: false,
   },
 });
+
+// Screens that call RPCs directly (touchDailyStreak, recordChallengeAttempt,
+// castDiscussionVote) need the signed-in user's id without threading it
+// through props — this reads the session supabase-js already keeps cached.
+export async function getCurrentUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
+}

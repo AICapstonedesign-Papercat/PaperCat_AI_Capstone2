@@ -13,6 +13,7 @@ import {
   statePatchToProfileColumns,
   upsertProfile,
   upsertPaperProgress,
+  touchDailyStreak,
 } from './lib/db';
 
 const KEY = '@papercat/state/v2';
@@ -44,6 +45,8 @@ export type PaperCatState = {
   // 논문 진행률(0~1)은 숫자, `${id}_summary` 같은 완료 플래그는 boolean — 캡디1과 동일하게 혼합 타입
   progress: Record<string, number | boolean>;
   interests?: string[];
+  challengeAttempts: number;
+  challengePasses: number;
 };
 
 const DEFAULT: PaperCatState = {
@@ -71,6 +74,8 @@ const DEFAULT: PaperCatState = {
   weeklyGoalLabel: '꾸준히',
   seenPapers: [],
   progress: { attention: 0.6, bert: 0.8 },
+  challengeAttempts: 0,
+  challengePasses: 0,
 };
 // ^ Demo placeholder values — only ever seen briefly before AsyncStorage/Supabase
 // resolve, or in the .env-not-configured dev fallback (SUPABASE_CONFIGURED === false,
@@ -177,6 +182,18 @@ async function hydrateFromSupabase(userId: string) {
     }
   } catch (err) {
     console.warn('[store] Supabase profile/progress 조회 실패 — 로컬 캐시 유지:', err);
+  }
+
+  // 로그인 스트릭은 세션당 한 번만 터치 — 서버가 원자적으로 계산한 값으로 되돌려 반영.
+  try {
+    const streak = await touchDailyStreak(userId, 0);
+    if (streak !== cache.streakDays) {
+      cache = { ...cache, streakDays: streak };
+      emit();
+      schedulePersist();
+    }
+  } catch (err) {
+    console.warn('[store] touchDailyStreak 실패:', err);
   }
 }
 

@@ -7,6 +7,7 @@ import { GuestBanner } from '../../components';
 import { useStore } from '../../store';
 import { usePaper } from '../../data/papers';
 import { askPaperQuestion, toPaperContext } from '../../lib/ai';
+import { useReadingSession, CHECKPOINT } from '../../hooks/useReadingSession';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
@@ -25,6 +26,8 @@ export default function QAChatbotScreen({ navigation, route }: Props) {
   const paperId = (route?.params as any)?.paperId || 'attention';
   const { paper } = usePaper(paperId);
   const [state] = useStore();
+
+  useReadingSession(paper?.id, CHECKPOINT.qaChatbot);
   const [showGuest, setShowGuest] = useState(state.isGuest);
   const [messages, setMessages] = useState<Message[]>(INITIAL);
   const [text, setText] = useState('');

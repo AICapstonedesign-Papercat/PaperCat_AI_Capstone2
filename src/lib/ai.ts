@@ -96,3 +96,14 @@ export type OverviewResult = {
 export async function generateOverview(paper: PaperContext): Promise<OverviewResult> {
   return invoke<OverviewResult>('generate-overview', { paper });
 }
+
+// ---------------------------------------------------------------------------
+// Paper discovery (ExploreScreen's category tabs) — finds real papers in a
+// category via Gemini (prioritized by citation count) and adds them to the
+// shared `papers` catalog server-side.
+// ---------------------------------------------------------------------------
+export type DiscoverResult = { added: { id: string; title: string }[] };
+
+export async function discoverPapers(category: Paper['cat']): Promise<DiscoverResult> {
+  return invoke<DiscoverResult>('discover-papers', { category });
+}

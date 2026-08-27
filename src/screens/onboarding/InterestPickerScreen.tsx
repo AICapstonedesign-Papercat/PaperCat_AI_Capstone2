@@ -71,8 +71,8 @@ export default function InterestPickerScreen({ navigation }: Props) {
   };
 
   const finish = () => {
-    // TODO(store): PaperCatState has no `interests` field yet -- persisted loosely until store.ts adds it.
-    set({ interests: selected } as any);
+    // profiles.interests 컬럼과 동기화됨 — HomeScreen 추천 논문 로직이 이 값을 읽음.
+    set({ interests: selected });
     navigation.navigate('StreakCommit');
   };
 

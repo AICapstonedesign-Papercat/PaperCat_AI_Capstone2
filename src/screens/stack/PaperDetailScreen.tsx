@@ -7,6 +7,7 @@ import { CatBubble, Card, Divider, GradeBadge } from '../../components';
 import { useStore } from '../../store';
 import { usePaper } from '../../data/papers';
 import { generateOverview, toPaperContext, type OverviewResult } from '../../lib/ai';
+import { useReadingSession, CHECKPOINT } from '../../hooks/useReadingSession';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
@@ -15,11 +16,20 @@ type Props = NativeStackScreenProps<ParamListBase>;
 export default function PaperDetailScreen({ navigation, route }: Props) {
   // route.params 타입 미정의 — as any로 접근 (per-screen param list 아직 없음)
   const paperId = (route.params as any)?.paperId || 'attention';
-  const [state] = useStore();
+  const [state, set] = useStore();
   const { paper } = usePaper(paperId);
   const summaryDone = state.progress?.[paperId + '_summary'] || false;
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
+
+  useReadingSession(paper?.id, CHECKPOINT.paperDetail);
+
+  useEffect(() => {
+    if (!paper || state.isGuest) return;
+    if (!(state.seenPapers || []).includes(paper.id)) {
+      set(prev => ({ seenPapers: [...(prev.seenPapers || []), paper.id] }));
+    }
+  }, [paper?.id, state.isGuest]);
 
   const [overview, setOverview] = useState<OverviewResult | null>(null);
   const [loadingOverview, setLoadingOverview] = useState(true);

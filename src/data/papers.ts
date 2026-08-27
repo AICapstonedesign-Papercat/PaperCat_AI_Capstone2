@@ -62,6 +62,15 @@ export function invalidatePapersCache() {
   cache = null;
 }
 
+// Drops the cache and re-fetches immediately, notifying every mounted
+// usePapers() hook once the new list lands — used after discoverPapers()
+// adds rows to the `papers` table so ExploreScreen picks them up without a
+// manual pull-to-refresh.
+export async function refreshPapers(): Promise<Paper[]> {
+  cache = null;
+  return loadPapers();
+}
+
 export function usePapers(): { papers: Paper[]; loading: boolean } {
   const [papers, setPapers] = useState<Paper[]>(cache || FALLBACK_PAPERS);
   const [loading, setLoading] = useState(!cache);

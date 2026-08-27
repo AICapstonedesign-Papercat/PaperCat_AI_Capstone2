@@ -4,6 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import { colors, readingWidth, centerColumn } from '../../theme/tokens';
 import { ProgressBar } from '../../components';
+import { useStore } from '../../store';
+import { usePaper } from '../../data/papers';
+import { CHECKPOINT } from '../../hooks/useReadingSession';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
@@ -12,19 +15,37 @@ type Props = NativeStackScreenProps<ParamListBase>;
 // Figma "StageMap" 확정 시안 — 지그재그 여정 경로(1~5장) + 완료 스테이지 반짝임 +
 // 진행 중 스테이지에 마스코트 + 마지막 잠긴 스테이지에 완독 보상 아이콘.
 // 5개 노드는 캡디2 실제 학습 활동(구조시각화·스토리텔링·요약챌린지·토론·QA챗봇)에 그대로 매핑.
-const STAGES = [
-  { n: '1장', title: '이해하기', screen: 'PaperDetail',      status: 'done' as const },
-  { n: '2장', title: '방법론',   screen: 'Storytelling',     status: 'done' as const },
-  { n: '3장', title: '실험설계', screen: 'SummaryChallenge', status: 'done' as const },
-  { n: '4장', title: '결과분석', screen: 'Discussion',       status: 'active' as const },
-  { n: '5장', title: '결론',     screen: 'QAChatbot',        status: 'locked' as const },
+// status는 더 이상 하드코딩이 아니라 paper_progress.progress(0~1) 체크포인트에서 계산 —
+// 각 스테이지 화면이 useReadingSession()으로 진입 시 자기 체크포인트까지 progress를 올림.
+const STAGE_DEFS = [
+  { n: '1장', title: '이해하기', screen: 'PaperDetail',      checkpoint: CHECKPOINT.paperDetail },
+  { n: '2장', title: '방법론',   screen: 'Storytelling',     checkpoint: CHECKPOINT.storytelling },
+  { n: '3장', title: '실험설계', screen: 'SummaryChallenge', checkpoint: CHECKPOINT.summaryChallenge },
+  { n: '4장', title: '결과분석', screen: 'Discussion',       checkpoint: CHECKPOINT.discussion },
+  { n: '5장', title: '결론',     screen: 'QAChatbot',        checkpoint: CHECKPOINT.qaChatbot },
 ];
 
 export default function StageMapScreen({ navigation, route }: Props) {
   // route.params 타입 미정의 — as any로 접근 (per-screen param list 아직 없음)
   const paperId = (route.params as any)?.paperId || 'attention';
+  const [state] = useStore();
+  const { paper } = usePaper(paperId);
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
+
+  const rawProgress = state.progress?.[paperId];
+  const currentProgress = typeof rawProgress === 'number' ? rawProgress : 0;
+
+  let activeAssigned = false;
+  const STAGES = STAGE_DEFS.map(def => {
+    const isDone = currentProgress >= def.checkpoint;
+    const status: 'done' | 'active' | 'locked' = isDone
+      ? 'done'
+      : !activeAssigned
+        ? (activeAssigned = true, 'active')
+        : 'locked';
+    return { ...def, status };
+  });
 
   const doneCount = STAGES.filter(s => s.status === 'done').length;
   const pct = doneCount / STAGES.length;
@@ -35,16 +56,16 @@ export default function StageMapScreen({ navigation, route }: Props) {
         <Pressable style={s.back} onPress={() => navigation.goBack()}>
           <Feather name="chevron-left" size={22} color={colors.text} />
         </Pressable>
-        <Text style={s.navTitle} numberOfLines={1}>Attention is All You Need</Text>
+        <Text style={s.navTitle} numberOfLines={1}>{paper?.title ?? '...'}</Text>
       </View>
 
       <View style={centerColumn}>
         <ScrollView style={readingWidth} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
-          <Text style={s.subTitle}>Attention is All You Need — {STAGES.length}개 스테이지 여정</Text>
+          <Text style={s.subTitle}>{paper?.title ?? '...'} — {STAGES.length}개 스테이지 여정</Text>
 
           <View style={s.statCard}>
             <Text style={s.pct}>{Math.round(pct * 100)}%</Text>
-            <Text style={s.pctSub}>{doneCount}/{STAGES.length} 스테이지 완료 · 예상 12분 남음</Text>
+            <Text style={s.pctSub}>{doneCount}/{STAGES.length} 스테이지 완료{doneCount < STAGES.length ? ` · 예상 ${(STAGES.length - doneCount) * 3}분 남음` : ''}</Text>
           </View>
 
           <View style={[s.path, isWide && s.pathWide]}>

@@ -1,29 +1,27 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { View, Text, Image, ScrollView, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../theme/tokens';
 import { useStore } from '../../store';
-import { usePaper, usePapers } from '../../data/papers';
+import { usePapers } from '../../data/papers';
 import { SectionTitle, GradeBadge, ProgressBar, SpotlightTour, type TourStep } from '../../components';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
-const REC_PAPER_ID = 'attention';
-
 const TOUR_STEPS_MEMBER: TourStep[] = [
-  { target: 'rec', title: '오늘의 추천 논문 · 이어서 학습하기', desc: '왼쪽은 매일 바뀌는 추천 논문이에요. 오른쪽은 읽다 만 논문을 이어보는 자리 — 진행률이 그대로 남아있어요. 탭하면 바로 그 지점부터 시작해요.' },
-  { target: 'challenges', title: '오늘의 도전 과제', desc: '논문 완독하기, 한 줄 요약 쓰기 같은 작은 미션이에요. 체크박스를 누르면 완료 표시되고 XP를 받아요 — 매일 초기화돼요.' },
+  { target: 'rec', title: '오늘의 추천 논문 · 이어서 학습하기', desc: '왼쪽은 관심 분야에 맞춰 고른 추천 논문이에요. 오른쪽은 읽다 만 논문을 이어보는 자리 — 진행률이 그대로 남아있어요. 탭하면 바로 그 지점부터 시작해요.' },
+  { target: 'challenges', title: '오늘의 도전 과제', desc: '논문 완독하기, 한 줄 요약 쓰기 같은 작은 미션이에요. 달성하면 자동으로 체크돼요.' },
   { target: 'week', title: '이번 주 학습', desc: '이번 주 학습 시간, 완료한 논문 수, 현재 레벨과 다음 레벨까지 남은 XP를 한눈에 볼 수 있어요. 밑줄은 주간 목표 대비 진행률이에요.' },
   { target: 'badges', title: '최근 도감', desc: '다 읽은 논문은 등급별 배지가 되어 여기 쌓여요. 이 줄을 탭하면 지금까지 모은 배지를 전체 도감에서 볼 수 있어요.' },
   { target: 'rail', title: '왼쪽 메뉴', desc: '탐색(새 논문 찾기) · 학습(진행 중인 논문) · 도감(모은 배지) · 프로필(내 통계·설정)로 여기서 바로 이동해요.' },
 ];
 
 const TOUR_STEPS_GUEST: TourStep[] = [
-  { target: 'rec', title: '오늘의 추천 논문 · 이어서 학습하기', desc: '왼쪽은 매일 바뀌는 추천 논문이에요. 오른쪽은 읽다 만 논문을 이어보는 자리 — 진행률이 그대로 남아있어요.' },
+  { target: 'rec', title: '오늘의 추천 논문 · 이어서 학습하기', desc: '왼쪽은 관심 분야에 맞춰 고른 추천 논문이에요. 오른쪽은 읽다 만 논문을 이어보는 자리 — 진행률이 그대로 남아있어요.' },
   { target: 'locked', title: '가입하면 쓸 수 있어요', desc: '한 줄 요약 채점, Q&A 챗봇, 다관점 토론은 가입 후 열려요. 지금은 체험판이라 잠겨있어요.' },
   { target: 'rail', title: '왼쪽 메뉴', desc: '탐색(새 논문 찾기) · 학습(진행 중인 논문) · 도감(모은 배지) · 프로필로 여기서 바로 이동해요.' },
 ];
@@ -40,14 +38,31 @@ const SILVER_BADGE = require('../../../assets/badges/badge-silver-1.png');
 
 export default function HomeScreen({ navigation }: Props) {
   const [state, set] = useStore();
-  const { paper: recPaper } = usePaper(REC_PAPER_ID);
   const { papers } = usePapers();
-  const [challenges, setChallenges] = React.useState([
-    { id: 1, text: '논문 1편 완료하기', xp: 50, done: true },
-    { id: 2, text: '한 줄 요약 작성하기', xp: 20, done: false },
-  ]);
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
+
+  // 오늘의 추천 논문 — InterestPickerScreen에서 고른 관심 분야(state.interests)에 맞는
+  // 논문 중 S등급·트렌딩을 우선 고르고, 관심사가 없거나 매칭이 없으면 대표 S등급 논문으로 폴백.
+  const recPaper = useMemo(() => {
+    if (papers.length === 0) return undefined;
+    const interests = state.interests || [];
+    const matches = interests.length > 0 ? papers.filter(p => interests.includes(p.cat)) : [];
+    const pool = matches.length > 0 ? matches : papers;
+    return (
+      pool.find(p => p.grade === 'S' && p.trending) ||
+      pool.find(p => p.grade === 'S') ||
+      pool.find(p => p.trending) ||
+      pool[0]
+    );
+  }, [papers, state.interests]);
+
+  // 오늘의 도전 과제 — 실제 완독/요약 기록에서 달성 여부를 계산 (더 이상 로컬 토글 아님).
+  const hasAnySummary = Object.keys(state.progress || {}).some(k => k.endsWith('_summary') && state.progress[k]);
+  const challenges = [
+    { id: 1, text: '논문 1편 완료하기', xp: 50, done: state.papersDone > 0 },
+    { id: 2, text: '한 줄 요약 작성하기', xp: 20, done: hasAnySummary },
+  ];
 
   // "이어서 학습하기" — 진행률이 0보다 크고 아직 안 끝난(<1) 논문 중 하나.
   const continuePaperId = Object.keys(state.progress || {}).find(k => {
@@ -112,8 +127,8 @@ export default function HomeScreen({ navigation }: Props) {
                 <Text style={s.recTitle}>{recPaper?.title}</Text>
                 <GradeBadge grade={recPaper?.grade} />
               </View>
-              <Text style={s.recMeta}>VASWANI ET AL. · {recPaper?.year} · 인용 {recPaper?.cites}</Text>
-              <Pressable onPress={() => navigation.navigate('PaperDetail', { paperId: 'attention' })}>
+              <Text style={s.recMeta}>{recPaper?.cat} · {recPaper?.year} · 인용 {recPaper?.cites}</Text>
+              <Pressable onPress={() => recPaper && navigation.navigate('PaperDetail', { paperId: recPaper.id })}>
                 <Text style={s.studyLink}>학습하기 →</Text>
               </Pressable>
             </View>
@@ -167,13 +182,13 @@ export default function HomeScreen({ navigation }: Props) {
               <SectionTitle title="오늘의 도전 과제" rule />
               <View style={{ marginBottom: 22 }}>
                 {challenges.map((c, i) => (
-                  <Pressable key={c.id} onPress={() => setChallenges(challenges.map(x => x.id === c.id ? { ...x, done: !x.done } : x))} style={[s.chal, i > 0 && s.chalBorder]}>
+                  <View key={c.id} style={[s.chal, i > 0 && s.chalBorder]}>
                     <View style={[s.checkbox, c.done && s.checkboxOn]}>
                       {c.done && <Feather name="check" size={16} color="#fff" />}
                     </View>
                     <Text style={[s.chalText, c.done && { color: colors.mutedSoft, textDecorationLine: 'line-through' }]}>{c.text}</Text>
                     <Text style={s.xpText}>+{c.xp} XP</Text>
-                  </Pressable>
+                  </View>
                 ))}
               </View>
               </View>

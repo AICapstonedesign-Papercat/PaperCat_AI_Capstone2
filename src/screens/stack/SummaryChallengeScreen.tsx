@@ -9,8 +9,14 @@ import { CatBubble, Card, ProgressBar, XPBurst, GuestBanner, Divider } from '../
 import { useStore } from '../../store';
 import { usePaper } from '../../data/papers';
 import { gradeSummary, toPaperContext, type GradeResult } from '../../lib/ai';
+import { useReadingSession, CHECKPOINT } from '../../hooks/useReadingSession';
+import { getCurrentUserId } from '../../lib/supabase';
+import { recordChallengeAttempt } from '../../lib/db';
 
 type Props = NativeStackScreenProps<ParamListBase>;
+
+// 65점 기준으로 '통과' — 아래 채점 피드백 톤과 xpEarned 등급이 이미 65를 기준선으로 쓰던 것과 맞춤.
+const PASS_SCORE = 65;
 
 export default function SummaryChallengeScreen({ navigation, route }: Props) {
   const paperId = (route?.params as any)?.paperId || 'attention'; // params not typed yet
@@ -22,6 +28,8 @@ export default function SummaryChallengeScreen({ navigation, route }: Props) {
   const [showXP, setShowXP] = useState(false);
   const [showGuest, setShowGuest] = useState(state.isGuest);
 
+  useReadingSession(paper?.id, CHECKPOINT.summaryChallenge);
+
   const submit = async () => {
     if (!text.trim() || grading || !paper) return;
     setGrading(true);
@@ -30,6 +38,18 @@ export default function SummaryChallengeScreen({ navigation, route }: Props) {
       setResult(graded);
       setShowXP(true);
       setTimeout(() => setShowXP(false), 1000);
+
+      if (!state.isGuest) {
+        const passed = graded.score >= PASS_SCORE;
+        const userId = await getCurrentUserId();
+        if (userId) {
+          await recordChallengeAttempt(userId, passed);
+          set(prev => ({
+            challengeAttempts: prev.challengeAttempts + 1,
+            challengePasses: prev.challengePasses + (passed ? 1 : 0),
+          }));
+        }
+      }
     } catch (err) {
       console.warn('[SummaryChallenge] gradeSummary 실패:', err);
       setResult({ score: 0, feedback: '앗, 채점을 못 가져왔어냥. 잠시 후 다시 시도해줘냥', matchedKeywords: [] });

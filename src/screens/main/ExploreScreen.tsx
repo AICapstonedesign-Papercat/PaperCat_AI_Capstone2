@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
@@ -6,13 +6,18 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../theme/tokens';
 import { GradeBadge, SpotlightTour, type TourStep } from '../../components';
 import { useStore } from '../../store';
-import { usePapers, type Paper } from '../../data/papers';
+import { usePapers, refreshPapers, type Paper } from '../../data/papers';
+import { discoverPapers } from '../../lib/ai';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { ParamListBase } from '@react-navigation/native';
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
 const CATS = ['전체', 'NLP', 'CV', 'RL', '생성AI'];
+
+// 카테고리당 세션 1회만 discover-papers를 호출 — 같은 탭을 반복 눌러도 매번
+// Gemini를 부르지 않도록. 모듈 레벨이라 화면을 나갔다 들어와도 앱 세션 동안 유지.
+const discoveredCategories = new Set<string>();
 
 const TOUR_STEPS: TourStep[] = [
   { target: 'search', title: '검색', desc: '논문 제목·저자·키워드로 바로 찾을 수 있어요.' },
@@ -33,6 +38,22 @@ export default function ExploreScreen({ navigation }: Props) {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('전체');
   const [mode, setMode] = useState('classic'); // 'classic' | 'trendy'
+  const [discovering, setDiscovering] = useState(false);
+
+  // 사용자가 특정 분야 탭을 고르면, 그 분야의 실제 논문을 Gemini로 찾아 카탈로그에
+  // 추가한다(discover-papers Edge Function). '전체'는 대상 아님 — 분야를 특정할 수 없어서.
+  useEffect(() => {
+    if (cat === '전체' || discoveredCategories.has(cat)) return;
+    discoveredCategories.add(cat);
+    setDiscovering(true);
+    discoverPapers(cat as Paper['cat'])
+      .then(({ added }) => (added.length > 0 ? refreshPapers() : undefined))
+      .catch(err => {
+        console.warn('[Explore] discoverPapers 실패:', err);
+        discoveredCategories.delete(cat); // 실패했으면 다음 탭 선택 때 재시도 허용
+      })
+      .finally(() => setDiscovering(false));
+  }, [cat]);
 
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
@@ -107,6 +128,10 @@ export default function ExploreScreen({ navigation }: Props) {
           </ScrollView>
         </View>
 
+        {discovering && (
+          <Text style={s.discovering}>냥이가 {cat} 분야 논문을 더 찾고 있어요…</Text>
+        )}
+
         {/* List */}
         <View ref={listRef}>
         {list.map((p, i) => (
@@ -164,6 +189,8 @@ const s = StyleSheet.create({
   modeLabelOn: { color: colors.ink, fontFamily: 'SUIT-Medium' },
   modeSub:   { fontSize: 11, fontFamily: 'Pretendard-Regular', color: colors.faint, lineHeight: 17 },
   modeSubOn: { color: colors.muted },
+
+  discovering: { fontSize: 12, fontFamily: 'Pretendard-Regular', color: colors.muted, marginBottom: 14 },
 
   catTabsWrap: { marginBottom: 22, borderBottomWidth: 1, borderColor: colors.hairline },
   catTab:    { paddingBottom: 10 },

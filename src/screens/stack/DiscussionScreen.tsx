@@ -9,30 +9,39 @@ import { GuestBanner, ProgressBar } from '../../components';
 import { useStore } from '../../store';
 import { usePaper } from '../../data/papers';
 import { generateDiscussion, toPaperContext, type DiscussionResult } from '../../lib/ai';
+import { useReadingSession, CHECKPOINT } from '../../hooks/useReadingSession';
+import { getCurrentUserId } from '../../lib/supabase';
+import { fetchDiscussionVotes, castDiscussionVote, type DiscussionVoteCounts, type DiscussionSide } from '../../lib/db';
 
 type Props = NativeStackScreenProps<ParamListBase>;
 
 // Figma "Discussion" 확정 시안 — VS 구도의 찬성/비판 카드(캐릭터 아바타 포함) + 심판 종합 + 투표바.
 // 카드 텍스트(vsTitle/sides/judge)는 generate-discussion Edge Function이 논문별로 생성 —
 // supabase/functions/generate-discussion/index.ts의 PROMPT 참고. 아바타 이미지는 진영(찬성/비판)에
-// 고정 매칭이라 그대로 로컬 에셋 사용. 참여자 투표 수치는 실제 투표 백엔드가 없는 장식용 표시임.
+// 고정 매칭이라 그대로 로컬 에셋 사용. 투표 수치는 discussion_votes 테이블 실집계
+// (RESPONSE_SCHEMA가 sides[0]=찬성/sides[1]=비판 순서를 강제하므로 인덱스로 pro/critical 매핑).
 const SIDE_AVATARS = [
   require('../../../assets/cat/cat-calm.png'),
   require('../../../assets/cat/cat-chill.png'),
 ];
+const SIDE_KEYS: DiscussionSide[] = ['pro', 'critical'];
 
 export default function DiscussionScreen({ navigation, route }: Props) {
   const paperId = (route?.params as any)?.paperId || 'attention';
   const { paper } = usePaper(paperId);
   const [state] = useStore();
   const [showGuest, setShowGuest] = useState(state.isGuest);
-  const [voted, setVoted] = useState(false);
   const { width } = useWindowDimensions();
   const isWide = width >= 900;
+
+  useReadingSession(paper?.id, CHECKPOINT.discussion);
 
   const [discussion, setDiscussion] = useState<DiscussionResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+
+  const [voteCounts, setVoteCounts] = useState<DiscussionVoteCounts | null>(null);
+  const [votingBusy, setVotingBusy] = useState(false);
 
   useEffect(() => {
     if (!paper) return;
@@ -48,6 +57,37 @@ export default function DiscussionScreen({ navigation, route }: Props) {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [paper?.id]);
+
+  useEffect(() => {
+    if (!paper || state.isGuest) return;
+    let cancelled = false;
+    getCurrentUserId().then(userId => {
+      if (!userId || cancelled) return;
+      fetchDiscussionVotes(paper.id, userId)
+        .then(counts => { if (!cancelled) setVoteCounts(counts); })
+        .catch(err => console.warn('[Discussion] fetchDiscussionVotes 실패:', err));
+    });
+    return () => { cancelled = true; };
+  }, [paper?.id, state.isGuest]);
+
+  const vote = async (side: DiscussionSide) => {
+    if (!paper || state.isGuest || votingBusy || voteCounts?.mine) return;
+    setVotingBusy(true);
+    try {
+      const userId = await getCurrentUserId();
+      if (!userId) return;
+      await castDiscussionVote(userId, paper.id, side);
+      const fresh = await fetchDiscussionVotes(paper.id, userId);
+      setVoteCounts(fresh);
+    } catch (err) {
+      console.warn('[Discussion] castDiscussionVote 실패:', err);
+    } finally {
+      setVotingBusy(false);
+    }
+  };
+
+  const totalVotes = (voteCounts?.pro ?? 0) + (voteCounts?.critical ?? 0);
+  const proPct = totalVotes > 0 ? (voteCounts?.pro ?? 0) / totalVotes : 0.5;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -73,15 +113,30 @@ export default function DiscussionScreen({ navigation, route }: Props) {
               <Text style={s.vsTitle}>{discussion.vsTitle}</Text>
 
               <View style={[s.sides, isWide && s.sidesWide]}>
-                {discussion.sides.map((side, i) => (
-                  <View key={i} style={[s.card, isWide && s.cardWide]}>
-                    <View style={s.cardHead}>
-                      <View style={s.chip}><Text style={s.chipText}>{side.label}</Text></View>
-                      <Image source={SIDE_AVATARS[i % SIDE_AVATARS.length]} style={s.avatar} resizeMode="contain" />
+                {discussion.sides.map((side, i) => {
+                  const sideKey = SIDE_KEYS[i % SIDE_KEYS.length];
+                  const isMine = voteCounts?.mine === sideKey;
+                  return (
+                    <View key={i} style={[s.card, isWide && s.cardWide]}>
+                      <View style={s.cardHead}>
+                        <View style={s.chip}><Text style={s.chipText}>{side.label}</Text></View>
+                        <Image source={SIDE_AVATARS[i % SIDE_AVATARS.length]} style={s.avatar} resizeMode="contain" />
+                      </View>
+                      <Text style={s.cardText}>{side.text}</Text>
+                      {!state.isGuest && (
+                        <Pressable
+                          disabled={votingBusy || !!voteCounts?.mine}
+                          onPress={() => vote(sideKey)}
+                          style={[s.cardVoteBtn, isMine && s.cardVoteBtnSel, !!voteCounts?.mine && !isMine && { opacity: 0.4 }]}
+                        >
+                          <Text style={[s.cardVoteBtnText, isMine && s.cardVoteBtnTextSel]}>
+                            {isMine ? '✓ 내 선택' : '이 편에 투표'}
+                          </Text>
+                        </Pressable>
+                      )}
                     </View>
-                    <Text style={s.cardText}>{side.text}</Text>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
 
               <View style={s.judge}>
@@ -90,14 +145,16 @@ export default function DiscussionScreen({ navigation, route }: Props) {
               </View>
 
               <View style={s.voteBlock}>
-                <Text style={s.voteLabel}>참여자 투표 · 42명 참여</Text>
-                <ProgressBar value={0.64} height={12} fillColor={colors.accent2} trackColor={colors.hairline} />
-                <Text style={s.voteSub}>찬성 64% · 반대 36%</Text>
+                {totalVotes > 0 ? (
+                  <>
+                    <Text style={s.voteLabel}>참여자 투표 · {totalVotes}명 참여</Text>
+                    <ProgressBar value={proPct} height={12} fillColor={colors.accent2} trackColor={colors.hairline} />
+                    <Text style={s.voteSub}>찬성 {Math.round(proPct * 100)}% · 비판 {Math.round((1 - proPct) * 100)}%</Text>
+                  </>
+                ) : (
+                  <Text style={s.voteLabel}>아직 투표가 없어요 — 카드 아래 버튼으로 첫 투표를 남겨보세요</Text>
+                )}
               </View>
-
-              <Pressable style={[s.voteCta, voted && { opacity: 0.5 }]} disabled={voted} onPress={() => setVoted(true)}>
-                <Text style={s.voteCtaText}>{voted ? '투표 완료!' : '내 관점 투표하기 →'}</Text>
-              </Pressable>
             </>
           )}
         </ScrollView>
@@ -143,6 +200,11 @@ const s = StyleSheet.create({
   avatar: { width: 48, height: 48 },
   cardText: { fontSize: 14, fontFamily: 'Pretendard-Regular', color: colors.text, lineHeight: 21 },
 
+  cardVoteBtn: { marginTop: 14, alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: colors.accent2 },
+  cardVoteBtnSel: { backgroundColor: colors.accent2 },
+  cardVoteBtnText: { fontSize: 12.5, fontFamily: 'Pretendard-Bold', color: colors.accent2 },
+  cardVoteBtnTextSel: { color: '#fff' },
+
   judge: { borderTopWidth: 1, borderColor: colors.hairline, paddingTop: 16, marginBottom: 20 },
   judgeLabel: { fontSize: 13, fontFamily: 'Pretendard-Bold', color: colors.accent2, marginBottom: 6 },
   judgeText: { fontSize: 13.5, fontFamily: 'Pretendard-Regular', color: colors.text, lineHeight: 20 },
@@ -150,9 +212,6 @@ const s = StyleSheet.create({
   voteBlock: { marginBottom: 16 },
   voteLabel: { fontSize: 13, fontFamily: 'Pretendard-Bold', color: colors.accent2, marginBottom: 10 },
   voteSub: { fontSize: 12.5, fontFamily: 'Pretendard-Regular', color: colors.muted, marginTop: 8 },
-
-  voteCta: { alignSelf: 'center', paddingVertical: 8 },
-  voteCtaText: { fontSize: 14, fontFamily: 'Pretendard-Bold', color: colors.accent },
 
   footer:  { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, paddingBottom: 28, backgroundColor: colors.bg },
   cta:     { height: 60, borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.accent },
