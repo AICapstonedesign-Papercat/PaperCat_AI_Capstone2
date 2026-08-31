@@ -247,7 +247,7 @@ AI 이해·활용력이 핵심 경쟁력이 됨 → 단순 툴 사용을 넘는 
 **수용 기준** 완료 직후 focus 재조회 반영. 주간=daily_activity 월~일 합산 단일 정의. 스트릭 KST 일 단위.
 
 ### F-16 RAG 파이프라인 — P1, blocked(D-03)
-**상태** papercat-core에서 인제스트→임베딩→검색→생성→가드 전 구간 실 API 검증 완료(청킹 병합 채택, 난수 구분자, 인용 검증 강화, LLM-judge·레드팀 28케이스). 앱·백엔드와는 미통합.
+**상태** papercat-core에서 인제스트→임베딩→검색→생성→가드 전 구간 실 API 검증 완료(청킹 병합 채택, 난수 구분자, 인용 검증 강화, LLM-judge·레드팀 28케이스, MEASUREMENT_VERSION 측정 버전 관리, `npm run check` 오프라인 검증). 앱·백엔드와는 미통합.
 **통합 제안** pgvector 768차원 + paper_chunks 시드 → qa-chat부터(F-10) → 스토리텔링 원문 기반 승격(F-07).
 **수용 기준** 골든셋 게이트 — 범위내 15문항 중 12 이상 근거지지, 범위밖 6문항 전건 거절.
 
@@ -287,12 +287,12 @@ Apple Pencil 주석·Split View(근거 원문 대조의 시각 확장)·Stage Ma
 ## 10. 비기능 요구사항
 
 **NF-01 Edge Function 인증·보안 — P0, missing, 최우선**
-전 함수 6종에 Authorization/getUser 검증 0건 — URL만 알면 외부인이 Gemini 키로 과금 가능. discover-papers는 서비스롤 쓰기까지 노출.
+전 함수 6종에 Authorization/getUser 검증 0건 — URL만 알면 외부인이 Gemini 키로 과금 가능. discover-papers는 서비스롤 쓰기까지 노출. verify_jwt 배포 플래그는 레포에 없어 대시보드 확인 필요.
 수정안: `_shared/auth.ts`에 getUser 검증 공통화 → 전 함수 적용, 미인증 401. 게스트 화면은 GuestLock으로 이미 잠겨 있어 UX 영향 없음.
 수용 기준: 토큰 없는 curl 호출 전 함수 401.
 
 **NF-02 AI 캐싱·쿼터·비용·응답성 — P0, partial**
-캐싱이 overview만 있음 — story/discussion 재방문마다 재호출 `[A-M07]`. 클라이언트 타임아웃 없음 — 무한 로딩 `[A-M01]`. Gemini 429가 항상 500으로 뭉개짐 `[A-M17]`. 무료 티어로는 운영 불가.
+캐싱이 overview만 있음 — story/discussion 재방문마다 재호출 `[A-M07]`. 클라이언트 타임아웃 없음 — 무한 로딩 `[A-M01]`. Gemini 429가 항상 500으로 뭉개짐 `[A-M17]`. 무료 티어로는 운영 불가 — 배포 전 유료 전환 또는 쿼터 예산 산정 필요(429 시 모델 교체 전략은 검증됨 — 모델별 쿼터가 독립 버킷).
 수용 기준: 논문 3편 왕복 시연 429 0회, 15초 타임아웃+재시도 UI, 429는 '잠시 후 재시도' 안내.
 
 **NF-03 데이터 무결성·스키마 — P0, partial**
@@ -331,7 +331,7 @@ Apple Developer 결제·명의 미결정. 개인정보처리방침·약관 실�
 | D-05 | 다관점 토론의 멀티모델 여부 — Claude/OpenAI 추가 vs 단일 Gemini 역할 분기 유지 | F-09 | 현행 유지 + 문구 수정 | 팀 회의 |
 | D-06 | 성민 협업 방식 — git collaborator 초대 vs zip 드롭 절차 유지 | NF-05 | 절차 문서화하며 zip 유지 | 인성 제안 → 성민 합의 |
 
-D-02 참고: 현행 유지 시 '인용수 기반 등급 메달' 근거 데이터가 없다. D-03 참고: pgvector 768차원+paper_chunks 시드 검증 완료, 분담안은 인성 포팅+성민 통합. D-04 참고: 추천 경로 ①layoutHint 배선 → ②flow+comparison → ③pipeline+grid → 여유 시 timeline·체크포인트 퀴즈. D-05 참고: `_shared/openai.ts`는 미사용 대기 중. 유지 시 발표 문구를 "관점이 다른 AI 에이전트(역할)"로 수정. Claude는 임베딩 API가 없어 RAG용으로는 어차피 Gemini/OpenAI가 필요하다(papercat-core 실측). D-06 참고: stale 파일 4개 역행 직전 사고 있었음.
+D-02 참고: 현행 유지 시 '인용수 기반 등급 메달' 근거 데이터가 없다. 학술 API를 연동하면 환각 인용수 결함(A-H12)도 근본 해소된다. D-03 참고: pgvector 768차원+paper_chunks 시드 검증 완료, 분담안은 인성 포팅+성민 통합 — 팀 합의 전 단독 진행 금지. D-04 참고: 추천 경로 ①layoutHint 배선(스키마 enum 1개+프롬프트 한 문단+컬럼 1개) → ②flow+comparison → ③pipeline+grid → 여유 시 timeline·체크포인트 퀴즈. 전부 View/flexbox+기존 설치분으로 구현 가능하고 곡선·도넛 필요 시에만 react-native-svg 1개 추가, Skia·victory-native·WebView 차트는 비용 대비 이득이 없어 비권장. D-05 참고: `_shared/openai.ts`는 미사용 대기 중. 유지 시 발표 문구를 "관점이 다른 AI 에이전트(역할)"로 수정. Claude는 임베딩 API가 없어 RAG용으로는 어차피 Gemini/OpenAI가 필요하다(papercat-core 실측). D-06 참고: stale 파일 4개(tsconfig·.gitignore·AuthScreen·.xcode.env.local) 역행 직전 사고 있었음. 레포는 현재 private — collaborator 초대나 공개 전에 문서 톤 점검 선행.
 
 ---
 
@@ -424,7 +424,7 @@ D-02 참고: 현행 유지 시 '인용수 기반 등급 메달' 근거 데이터
 
 ## 15. 디자인 트랙
 
-**Figma**: PaperCat iPad — 컨셉 탐색 전용, RN과 강제 동기화 안 함. 미결: 스타일 최종 선택(V1 점선카드/V2 배지형/V3 컬러등급형), Login/SignUp 분리 시안 vs RN 단일 화면 구조 대조.
+**Figma**: PaperCat iPad — `https://www.figma.com/design/cMFfcSveoB3pOPu5LPUT6u` (컨셉 탐색 전용, RN과 강제 동기화 안 함). node ID는 2026-08-02 전면 재발급 — Page 2=100:32, ①최종5=100:1677 ②컨셉=100:2000 ③게임화=100:2179 ④하이브리드11=100:2553 ⑦⑧⑨ V1/V2/V3=100:33/100:691/100:1164. 미결: 스타일 최종 선택(V1 점선카드—폴리시 완료/V2 배지형—러프/V3 컬러등급형—러프, 선택분만 최종 반영), Login(221:2)/SignUp(221:24) 분리 시안 vs RN AuthScreen 단일 화면 대조, ⑤ 확정16 클론은 V1 소스 수정 시 반드시 재동기화(누락 사고 이력 있음).
 
 **디자인 부채**: 이펙트 효과 디자인 아티팩트 정리 미착수. iPad 화면비 재해석 원칙 유지(RN은 상대단위라 구조는 무관). RN 글로우 제약 실측 — filter dropShadow·radial-gradient 미렌더, blur만 동작.
 
