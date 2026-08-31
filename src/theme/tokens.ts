@@ -1,4 +1,4 @@
-// 캡디1 원본(github.com/itsinseong/PaperCat_AI_Capstone1, src/theme.js) 그대로 이식.
+// 색상·타이포·반경 등 디자인 토큰.
 // 폰트 파일(assets/fonts) + Feather 아이콘 폰트 링크 완료(react-native-asset).
 export const colors = {
   bg: '#F7F3EF',
@@ -61,7 +61,7 @@ export const colors = {
   medalBronze: '#E7B98F',
   medalBronzeText: '#6B3F1A',
 
-  // 구 화면(HomeScreen 등)이 참조하던 범용 이름 — 실제 화면 포팅하면서 위 캡디1 이름으로 정리 예정
+  // 일부 화면(HomeScreen 등)이 참조하는 범용 별칭 — 위 시맨틱 이름으로 점차 정리 예정
   background: '#F7F3EF',
   primary: '#D4A574',
   textMuted: '#857458',
@@ -87,7 +87,7 @@ export const spacing = {
   xxl: 48,
 } as const;
 
-// 캡디1은 iPhone(~390pt) 폭 기준이라 읽기 전용 단일 컬럼 화면(스토리·토론·리뷰 등)은
+// 화면 설계가 iPhone(~390pt) 폭 기준이라 읽기 전용 단일 컬럼 화면(스토리·토론·리뷰 등)은
 // 그대로 두면 iPad(1024pt+)에서 텍스트 줄이 화면 끝까지 늘어져 가독성이 깨짐.
 // 주의: ScrollView의 contentContainerStyle에 alignSelf:'center'를 넣는 건 RN에서 안 먹음
 // (컨텐츠 컨테이너가 자기 부모 기준으로 정렬되지 않음) — 대신 ①바깥 컨테이너에 centerColumn으로
@@ -118,7 +118,7 @@ export const kicker = {
   color: colors.muted,
 };
 
-// 구 화면이 쓰던 범용 타이포 스케일 — 캡디1 화면 포팅되면서 font.*로 점차 대체 예정
+// 일부 화면이 쓰는 범용 타이포 스케일 — font.*로 점차 대체 예정
 export const typography = {
   display: { fontSize: 32, fontWeight: '700' as const },
   title: { fontSize: 22, fontWeight: '600' as const },

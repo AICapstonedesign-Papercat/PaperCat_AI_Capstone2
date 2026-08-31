@@ -1,4 +1,4 @@
-// 캡디1(PaperCat_AI_Capstone1/src/store.js) 그대로 이식 — AsyncStorage 기반 미니 전역 스토어.
+// AsyncStorage 기반 미니 전역 스토어.
 // Supabase 연동: AsyncStorage는 그대로 로컬 캐시/게스트 저장소로 쓰고, 로그인된(비게스트)
 // 사용자는 profiles/paper_progress 테이블과 추가로 동기화한다 (하이드레이션은 pull,
 // set()은 push) — src/lib/db.ts 참고.
@@ -42,7 +42,7 @@ export type PaperCatState = {
   weeklyGoalPapers: number;
   weeklyGoalLabel: string;
   seenPapers: string[];
-  // 논문 진행률(0~1)은 숫자, `${id}_summary` 같은 완료 플래그는 boolean — 캡디1과 동일하게 혼합 타입
+  // 논문 진행률(0~1)은 숫자, `${id}_summary` 같은 완료 플래그는 boolean인 혼합 타입
   progress: Record<string, number | boolean>;
   interests?: string[];
   challengeAttempts: number;

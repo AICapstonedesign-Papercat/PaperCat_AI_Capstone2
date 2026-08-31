@@ -94,3 +94,9 @@ assets/ad_video/
 assets/video/*
 !assets/video/onboarding.mp4
 !assets/video/onboarding.gif
+
+# 기획서 아카이브: 로컬 보관만, 공유는 팀 아티팩트로 (docs/PROJECT.md §17)
+papercat-core/data/기획서_v3.5.html
+
+# 기능 상태·우선순위 기계판독 원본: 로컬 작업 파일 (사람용 정본은 docs/PROJECT.md)
+docs/features.yaml

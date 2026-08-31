@@ -1,5 +1,4 @@
-// 캡디1(PaperCat_AI_Capstone1/src/components.js) 이식. Expo 전용 패키지만 bare RN 대체재로 교체:
-// @expo/vector-icons/Feather → react-native-vector-icons/Feather, expo-linear-gradient → react-native-linear-gradient.
+// 공용 UI 컴포넌트. bare RN 기준 — 아이콘 react-native-vector-icons/Feather, 그라데이션 react-native-linear-gradient.
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Image, ScrollView, StyleSheet, Animated, Modal, Pressable, Dimensions, ImageSourcePropType } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';

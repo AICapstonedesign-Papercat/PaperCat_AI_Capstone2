@@ -22,8 +22,7 @@ import LearningCompleteScreen from '../screens/stack/LearningCompleteScreen';
 
 const Stack = createNativeStackNavigator();
 
-// 캡디1(github.com/itsinseong/PaperCat_AI_Capstone1, src/Nav.js) 구조 그대로 계승 —
-// 온보딩 스크린도 별도 네비게이터로 감싸지 않고 루트 스택에 평평하게 나열(원본과 동일).
+// 온보딩 스크린도 별도 네비게이터로 감싸지 않고 루트 스택에 평평하게 나열.
 // 스플릿뷰 같은 iPad 전용 레이아웃은 아직 안 만듦 — iPhone 착수 시점에 이 파일만 조건 분기 추가하면 됨.
 export default function RootNavigator() {
   const [initialRoute, setInitialRoute] = useState<string | null>(null);

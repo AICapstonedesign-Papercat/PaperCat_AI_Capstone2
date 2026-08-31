@@ -14,7 +14,7 @@ type Props = NativeStackScreenProps<ParamListBase>;
 
 // Figma "StageMap" 확정 시안 — 지그재그 여정 경로(1~5장) + 완료 스테이지 반짝임 +
 // 진행 중 스테이지에 마스코트 + 마지막 잠긴 스테이지에 완독 보상 아이콘.
-// 5개 노드는 캡디2 실제 학습 활동(구조시각화·스토리텔링·요약챌린지·토론·QA챗봇)에 그대로 매핑.
+// 5개 노드는 실제 학습 활동(구조시각화·스토리텔링·요약챌린지·토론·QA챗봇)에 그대로 매핑.
 // status는 더 이상 하드코딩이 아니라 paper_progress.progress(0~1) 체크포인트에서 계산 —
 // 각 스테이지 화면이 useReadingSession()으로 진입 시 자기 체크포인트까지 progress를 올림.
 const STAGE_DEFS = [

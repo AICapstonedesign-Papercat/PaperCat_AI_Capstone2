@@ -1,15 +1,17 @@
 # PaperCat API 계약 스펙
 
-**스택: Supabase** (Auth + Postgres + Edge Functions). 기획서 §6의 후보 A(별도 Node)·B'(Vercel
-서버리스)를 대체합니다. MongoDB Atlas + Vector Search도 **Postgres + pgvector**로 대체 — 같은 DB
-안에서 벡터 검색이 되므로 별도 DB를 붙일 이유가 없어졌습니다.
+> 2026-08-02 시점 계약. 현행 구현(Edge Function 6종·테이블 6종·마이그레이션 3본, `supabase/` 기준)과
+> 어긋나는 부분이 있어 갱신 대기 중 — 현행이 항상 우선한다(`docs/PROJECT.md` NF-05 참조).
+
+**스택: Supabase** (Auth + Postgres + Edge Functions). 벡터 검색은 **Postgres + pgvector** —
+같은 DB 안에서 벡터 검색이 되므로 별도 DB를 붙일 이유가 없습니다.
 
 이 문서의 목적은 **앱과 서버가 주고받을 JSON의 모양과 의미를 미리 맞춰두는 것**입니다.
 엔드포인트 이름·URL 구조는 편한 대로 바꿔도 되고, **응답 안의 필드 의미**만 지켜지면 됩니다.
 그 의미들은 `papercat-core`에서 논문 3편으로 실측하고 적대검증까지 돌려서 확정한 것이라,
 근거를 각 절에 같이 적어뒀습니다.
 
-앱(캡스톤2 RN)은 이 계약대로 목업 레이어를 깔아둘 예정이라, base URL만 바꾸면 실서버로 스왑됩니다.
+앱(RN)은 이 계약대로 목업 레이어를 깔아둘 예정이라, base URL만 바꾸면 실서버로 스왑됩니다.
 
 ---
 
@@ -206,7 +208,7 @@ Body: { "paperId": "attention", "summary": "Transformer는 ..." }
 
 ---
 
-## 7. 앱(캡스톤2) 쪽 대응
+## 7. 앱(RN) 쪽 대응
 
 - `SummaryChallengeScreen`이 아직 로컬 목업이고 `uncertain` 분기가 없습니다 — 실채점 붙일 때 추가.
 - 앱은 논문 8편을 보여주는데 인제스트된 건 3편입니다. P1 단계에선 3편만 `ready`, 나머지는
